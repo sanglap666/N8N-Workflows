@@ -1,0 +1,502 @@
+{
+  "name": "AI Powered - Threat Feeds Generator",
+  "nodes": [
+    {
+      "parameters": {
+        "rule": {
+          "interval": [
+            {
+              "triggerAtHour": 6
+            }
+          ]
+        }
+      },
+      "type": "n8n-nodes-base.scheduleTrigger",
+      "typeVersion": 1.2,
+      "position": [
+        -464,
+        -16
+      ],
+      "id": "92083448-8ebf-4529-a3ef-5bde35eee769",
+      "name": "Schedule Trigger"
+    },
+    {
+      "parameters": {
+        "url": "https://www.darkreading.com/rss.xml",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.rssFeedRead",
+      "typeVersion": 1.2,
+      "position": [
+        -240,
+        16
+      ],
+      "id": "579f1e0a-d4ae-4832-9770-a8355e979c68",
+      "name": "RSS Read - DarkReading"
+    },
+    {
+      "parameters": {
+        "url": "https://threatpost.com/feed/",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.rssFeedRead",
+      "typeVersion": 1.2,
+      "position": [
+        -240,
+        -160
+      ],
+      "id": "ffb92784-388e-4e94-b83c-40d89c4352c5",
+      "name": "RSS Read - ThreatPost"
+    },
+    {
+      "parameters": {
+        "url": "https://news.ycombinator.com/rss",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.rssFeedRead",
+      "typeVersion": 1.2,
+      "position": [
+        -240,
+        208
+      ],
+      "id": "bd57ea60-6f2e-4d8c-a160-ca30ac59d98b",
+      "name": "RSS Read - HackerNews"
+    },
+    {
+      "parameters": {
+        "url": "https://krebsonsecurity.com/feed/",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.rssFeedRead",
+      "typeVersion": 1.2,
+      "position": [
+        -240,
+        416
+      ],
+      "id": "c85980f1-e780-410f-b202-4ac933e4fac0",
+      "name": "RSS Read - KrebsonSecurity"
+    },
+    {
+      "parameters": {
+        "url": "https://www.us-cert.cisa.gov/ncas/alerts.xml",
+        "options": {
+          "ignoreSSL": true
+        }
+      },
+      "type": "n8n-nodes-base.rssFeedRead",
+      "typeVersion": 1.2,
+      "position": [
+        -240,
+        624
+      ],
+      "id": "13d6fc10-215d-4f98-8bba-000665a49f6f",
+      "name": "RSS Read - CISA Gov"
+    },
+    {
+      "parameters": {
+        "url": "https://feeds.feedburner.com/BleepingComputer",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.rssFeedRead",
+      "typeVersion": 1.2,
+      "position": [
+        -240,
+        -336
+      ],
+      "id": "825636b5-deaa-447a-92d2-9432cf67018c",
+      "name": "RSS Read - FeedBurner"
+    },
+    {
+      "parameters": {
+        "numberInputs": 6
+      },
+      "type": "n8n-nodes-base.merge",
+      "typeVersion": 3.2,
+      "position": [
+        192,
+        64
+      ],
+      "id": "097fe097-2ea3-437d-8df5-1c4b83a53863",
+      "name": "Merge"
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 2
+          },
+          "conditions": [
+            {
+              "id": "d3f623dd-e202-4e6b-a73d-8487c015d340",
+              "leftValue": "={{ $json.pubDate }}",
+              "rightValue": "={{$today.minus({days: 1})}}",
+              "operator": {
+                "type": "dateTime",
+                "operation": "afterOrEquals"
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.filter",
+      "typeVersion": 2.2,
+      "position": [
+        448,
+        128
+      ],
+      "id": "3fd1d983-fddc-4bd3-86bc-d7e671c810ad",
+      "name": "Filter"
+    },
+    {
+      "parameters": {
+        "aggregate": "aggregateAllItemData",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.aggregate",
+      "typeVersion": 1,
+      "position": [
+        688,
+        128
+      ],
+      "id": "65f1bf32-e600-4fcf-b87b-b727c60f60b4",
+      "name": "Aggregate"
+    },
+    {
+      "parameters": {
+        "mode": "jsonToxml",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.xml",
+      "typeVersion": 1,
+      "position": [
+        928,
+        128
+      ],
+      "id": "c0e34961-758b-46b1-b60e-26fc297ea6bf",
+      "name": "XML"
+    },
+    {
+      "parameters": {
+        "promptType": "define",
+        "text": "=You are a cyber threat intelligence assistant. \nI will provide you with an XML feed containing cybersecurity articles.\n\nYour task:\n1. Analyze the feed and extract ONLY items related to:\n   - Malware\n   - Advanced Persistent Threats (APTs)\n   - Vulnerabilities and CVEs\n   - Leaked credentials / data breaches\n   - Exploits and attacks\n\n2. For each relevant article, return only these details:\n   - Published Date (UTC format if available)\n   - Short Description (2–3 sentence summary)\n   - MITRE ATT&CK Tactics & Techniques (If not specified, analyze and add)\n   - Source Link\n\n3. Output MUST be in the following strict JSON format (no markdown, no extra text):\n\n{\n  \"reportDate\": \"YYYY-MM-DD\",\n  \"summary\": [\n    \"⚠️ Key threat 1 …\",\n    \"🐍 Key threat 2 …\",\n    \"🔒 Key threat 3 …\"\n  ],\n  \"articles\": [\n    {\n      \"date\": \"YYYY-MM-DD HH:MM:SS UTC\",\n      \"description\": \"Short summary of the article\",\n      \"mitre\": \"Comma separated list of tactics/techniques OR Not Specified\",\n      \"link\": \"https://original-source-link\"\n    }\n  ]\n}\n\nIMPORTANT:\n- \"summary\" must be an array of bullet points with relevant emojis.  \n- Always output ONLY valid JSON.\n- Do NOT include code fences (```json or ```).\n- Do NOT include explanations, text, or commentary.\n- Do NOT include markdown formatting.\n- Return JSON only.\n\nHere is the XML feed data to analyze:\n{{ $json.data }}",
+        "options": {}
+      },
+      "type": "@n8n/n8n-nodes-langchain.agent",
+      "typeVersion": 2.2,
+      "position": [
+        1136,
+        128
+      ],
+      "id": "ce7703ee-9923-4184-b015-239ecdd555a5",
+      "name": "AI Agent"
+    },
+    {
+      "parameters": {
+        "options": {}
+      },
+      "type": "@n8n/n8n-nodes-langchain.lmChatGoogleGemini",
+      "typeVersion": 1,
+      "position": [
+        1008,
+        336
+      ],
+      "id": "93c145a3-6777-42a7-9065-e4a683e35f41",
+      "name": "Google Gemini Chat Model",
+      "credentials": {
+        "googlePalmApi": {
+          "id": "COC8dVWPtg3rjR0r",
+          "name": "Google Gemini(PaLM) Api account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "https://api.html2pdf.app/v1/generate",
+        "sendBody": true,
+        "bodyParameters": {
+          "parameters": [
+            {
+              "name": "html",
+              "value": "={{ $json.htmlReport }}"
+            },
+            {
+              "name": "apiKey",
+              "value": "idMjDjD8gXWKGTTpfnvae5AK20qxvxdCetJvdfv0QH9NAZp77PjLWzMG3FHWsnkQ"
+            },
+            {
+              "name": "landscape",
+              "value": "true"
+            },
+            {
+              "name": "format",
+              "value": "A4"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        1696,
+        128
+      ],
+      "id": "d3489907-74d6-4cbf-a1f8-ead5af8ad5b8",
+      "name": "HTTP Request"
+    },
+    {
+      "parameters": {
+        "sendTo": "sanglap.patra@outlook.com",
+        "subject": "={{ $json.emailSubject }}",
+        "message": "={{ $json.emailBody }}",
+        "options": {
+          "attachmentsUi": {
+            "attachmentsBinary": [
+              {}
+            ]
+          }
+        }
+      },
+      "type": "n8n-nodes-base.gmail",
+      "typeVersion": 2.1,
+      "position": [
+        1904,
+        128
+      ],
+      "id": "509eab44-3b7b-4671-a16a-e2de31dd0d46",
+      "name": "Send a message",
+      "webhookId": "ec94efd4-afe8-4239-bb02-a97beb6fad2b",
+      "credentials": {
+        "gmailOAuth2": {
+          "id": "z34YpSUcxts09lgE",
+          "name": "Gmail account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "jsCode": "const raw = $input.first().json.output; // AI Agent output\nlet parsed;\n\ntry {\n  parsed = JSON.parse(raw);\n} catch (e) {\n  throw new Error(\"AI output is not valid JSON: \" + e.message);\n}\n\n/* -------------------- PDF Report (HTML) -------------------- */\nlet html = `\n<h1>Daily Cyber Threat Intelligence Report</h1>\n<p><b>Date:</b> ${parsed.reportDate}</p>\n\n<h2>📌 Summary of Key Threats</h2>\n<ul>\n`;\n\nparsed.summary.forEach(point => {\n  html += `<li>${point}</li>`;\n});\n\nhtml += `</ul>\n\n<h2>📰 Detailed Articles</h2>\n<table border=\"1\" cellspacing=\"0\" cellpadding=\"5\" style=\"border-collapse:collapse; width:100%;\">\n  <tr style=\"background:#f2f2f2;\">\n    <th>Date</th>\n    <th>Description</th>\n    <th>MITRE Tactics & Techniques</th>\n    <th>Source Link</th>\n  </tr>\n`;\n\nparsed.articles.forEach(article => {\n  html += `\n  <tr>\n    <td>${article.date}</td>\n    <td>${article.description}</td>\n    <td>${article.mitre}</td>\n    <td><a href=\"${article.link}\" target=\"_blank\">Source</a></td>\n  </tr>\n  `;\n});\n\nhtml += `\n</table>\n`;\n\n/* -------------------- Email Body -------------------- */\nlet emailBody = `\n<h2>📢 Daily Cyber Threat Intelligence Report</h2>\n<p><b>Date:</b> ${parsed.reportDate}</p>\n\n<p><b>Summary of Key Threats:</b></p>\n<ul>\n`;\n\nparsed.summary.forEach(point => {\n  emailBody += `<li>${point}</li>`;\n});\n\nemailBody += `\n</ul>\n<p>Please find the detailed report attached as PDF.</p>\n\n<hr style=\"margin-top:20px; margin-bottom:10px; border:0; border-top:1px solid #ccc;\">\n\n<p style=\"font-size:14px; color:#555;\">\nBest Regards,<br>\n<b>Cyber Threat Intelligence Team</b><br>\n🔒 Security Operations Center (SOC)<br>\n<i>This is an automated report generated by the CTI System</i>\n</p>\n`;\n\n/* -------------------- Return Combined Outputs -------------------- */\nreturn [{\n  json: {\n    emailSubject: `Daily Cyber Threat Intelligence Report – ${parsed.reportDate}`,\n    emailBody: emailBody,\n    htmlReport: html,\n    parsedData: parsed\n  }\n}];\n"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        1488,
+        128
+      ],
+      "id": "a4c56f87-924c-43e4-a20e-3851087ef9e0",
+      "name": "Format CTI Report & Email (HTML) - JS Code"
+    }
+  ],
+  "pinData": {},
+  "connections": {
+    "Schedule Trigger": {
+      "main": [
+        [
+          {
+            "node": "RSS Read - DarkReading",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "RSS Read - ThreatPost",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "RSS Read - HackerNews",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "RSS Read - KrebsonSecurity",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "RSS Read - CISA Gov",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "RSS Read - FeedBurner",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "RSS Read - DarkReading": {
+      "main": [
+        [
+          {
+            "node": "Merge",
+            "type": "main",
+            "index": 2
+          }
+        ]
+      ]
+    },
+    "RSS Read - ThreatPost": {
+      "main": [
+        [
+          {
+            "node": "Merge",
+            "type": "main",
+            "index": 1
+          }
+        ]
+      ]
+    },
+    "RSS Read - HackerNews": {
+      "main": [
+        [
+          {
+            "node": "Merge",
+            "type": "main",
+            "index": 3
+          }
+        ]
+      ]
+    },
+    "RSS Read - FeedBurner": {
+      "main": [
+        [
+          {
+            "node": "Merge",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "RSS Read - KrebsonSecurity": {
+      "main": [
+        [
+          {
+            "node": "Merge",
+            "type": "main",
+            "index": 4
+          }
+        ]
+      ]
+    },
+    "RSS Read - CISA Gov": {
+      "main": [
+        [
+          {
+            "node": "Merge",
+            "type": "main",
+            "index": 5
+          }
+        ]
+      ]
+    },
+    "Merge": {
+      "main": [
+        [
+          {
+            "node": "Filter",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Filter": {
+      "main": [
+        [
+          {
+            "node": "Aggregate",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Aggregate": {
+      "main": [
+        [
+          {
+            "node": "XML",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "XML": {
+      "main": [
+        [
+          {
+            "node": "AI Agent",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Google Gemini Chat Model": {
+      "ai_languageModel": [
+        [
+          {
+            "node": "AI Agent",
+            "type": "ai_languageModel",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "AI Agent": {
+      "main": [
+        [
+          {
+            "node": "Format CTI Report & Email (HTML) - JS Code",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "HTTP Request": {
+      "main": [
+        [
+          {
+            "node": "Send a message",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Format CTI Report & Email (HTML) - JS Code": {
+      "main": [
+        [
+          {
+            "node": "HTTP Request",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": false,
+  "settings": {
+    "executionOrder": "v1",
+    "timezone": "Asia/Kolkata",
+    "callerPolicy": "workflowsFromSameOwner"
+  },
+  "versionId": "6e24c317-cccd-45f5-8f52-8a323cffb84d",
+  "meta": {
+    "templateCredsSetupCompleted": true,
+    "instanceId": "c0dab8cfa67ec9a6f9ebfdb3c6d9f6c048e1c6eef2d0da40e01469c3abc349fd"
+  },
+  "id": "kMq6HWk3VmV7aixm",
+  "tags": []
+}

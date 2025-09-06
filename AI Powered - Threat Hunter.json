@@ -1,0 +1,756 @@
+{
+  "name": "AI Powered - Threat Hunter",
+  "nodes": [
+    {
+      "parameters": {
+        "rule": {
+          "interval": [
+            {
+              "triggerAtHour": 6
+            }
+          ]
+        }
+      },
+      "type": "n8n-nodes-base.scheduleTrigger",
+      "typeVersion": 1.2,
+      "position": [
+        -464,
+        144
+      ],
+      "id": "6f1fbbaa-1796-45de-b83c-e5087c251bec",
+      "name": "Schedule Trigger"
+    },
+    {
+      "parameters": {
+        "url": "https://www.darkreading.com/rss.xml",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.rssFeedRead",
+      "typeVersion": 1.2,
+      "position": [
+        -240,
+        48
+      ],
+      "id": "cb3793fc-9260-41e9-a8f0-e53eb86ccdfb",
+      "name": "RSS Read - DarkReading"
+    },
+    {
+      "parameters": {
+        "url": "https://threatpost.com/feed/",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.rssFeedRead",
+      "typeVersion": 1.2,
+      "position": [
+        -240,
+        -144
+      ],
+      "id": "f9111a34-505b-4120-b8ab-0d062e8a60f4",
+      "name": "RSS Read - ThreatPost"
+    },
+    {
+      "parameters": {
+        "url": "https://news.ycombinator.com/rss",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.rssFeedRead",
+      "typeVersion": 1.2,
+      "position": [
+        -240,
+        240
+      ],
+      "id": "788b4e39-dea2-40f9-a184-a84c2ec71051",
+      "name": "RSS Read - HackerNews"
+    },
+    {
+      "parameters": {
+        "url": "https://krebsonsecurity.com/feed/",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.rssFeedRead",
+      "typeVersion": 1.2,
+      "position": [
+        -240,
+        432
+      ],
+      "id": "efb443f6-b594-440e-a806-3003d7538c3d",
+      "name": "RSS Read - KrebsonSecurity"
+    },
+    {
+      "parameters": {
+        "url": "https://www.us-cert.cisa.gov/ncas/alerts.xml",
+        "options": {
+          "ignoreSSL": true
+        }
+      },
+      "type": "n8n-nodes-base.rssFeedRead",
+      "typeVersion": 1.2,
+      "position": [
+        -240,
+        624
+      ],
+      "id": "13d5186b-4875-4eb5-b52b-419b73d42586",
+      "name": "RSS Read - CISA Gov"
+    },
+    {
+      "parameters": {
+        "url": "https://feeds.feedburner.com/BleepingComputer",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.rssFeedRead",
+      "typeVersion": 1.2,
+      "position": [
+        -240,
+        -336
+      ],
+      "id": "3f5ba524-1134-4cd9-b1bc-570943c0f2c8",
+      "name": "RSS Read - FeedBurner"
+    },
+    {
+      "parameters": {
+        "numberInputs": 6
+      },
+      "type": "n8n-nodes-base.merge",
+      "typeVersion": 3.2,
+      "position": [
+        -16,
+        80
+      ],
+      "id": "5c7095fc-dcd1-48e8-87f5-8915cdd0fcd7",
+      "name": "Merge"
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 2
+          },
+          "conditions": [
+            {
+              "id": "d3f623dd-e202-4e6b-a73d-8487c015d340",
+              "leftValue": "={{ $json.pubDate }}",
+              "rightValue": "={{$today.minus({days: 1})}}",
+              "operator": {
+                "type": "dateTime",
+                "operation": "afterOrEquals"
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.filter",
+      "typeVersion": 2.2,
+      "position": [
+        208,
+        144
+      ],
+      "id": "7ed8e891-9886-4a5d-a5f7-c3ed403ed52f",
+      "name": "Filter"
+    },
+    {
+      "parameters": {
+        "aggregate": "aggregateAllItemData",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.aggregate",
+      "typeVersion": 1,
+      "position": [
+        432,
+        144
+      ],
+      "id": "4946c067-d2fd-4c88-b350-39869f49c931",
+      "name": "Aggregate"
+    },
+    {
+      "parameters": {
+        "options": {}
+      },
+      "type": "@n8n/n8n-nodes-langchain.lmChatGoogleGemini",
+      "typeVersion": 1,
+      "position": [
+        960,
+        368
+      ],
+      "id": "2167c533-770a-474a-b5a7-db17e724fdac",
+      "name": "Google Gemini Chat Model",
+      "credentials": {
+        "googlePalmApi": {
+          "id": "COC8dVWPtg3rjR0r",
+          "name": "Google Gemini(PaLM) Api account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "jsCode": "const raw = $input.first().json.output; // AI Agent output\nlet parsed;\n\ntry {\n  parsed = JSON.parse(raw);\n} catch (e) {\n  throw new Error(\"AI output is not valid JSON: \" + e.message);\n}\n\n// Extract links from articles array\nconst urls = parsed.articles\n  ? parsed.articles.map(article => article.link).filter(Boolean)\n  : [];\n\n/* -------------------- Return Only URLs -------------------- */\nreturn [{\n  json: {\n    urls: urls\n  }\n}];\n"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        1232,
+        144
+      ],
+      "id": "1c359014-59be-4f74-9e59-db35d6289c56",
+      "name": "Format JSON Data - JS Code"
+    },
+    {
+      "parameters": {
+        "options": {}
+      },
+      "type": "@n8n/n8n-nodes-langchain.lmChatGoogleGemini",
+      "typeVersion": 1,
+      "position": [
+        1536,
+        368
+      ],
+      "id": "463e1588-63e2-49a8-824c-3be8743ceca1",
+      "name": "Google Gemini Chat Model1",
+      "credentials": {
+        "googlePalmApi": {
+          "id": "COC8dVWPtg3rjR0r",
+          "name": "Google Gemini(PaLM) Api account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "promptType": "define",
+        "text": "=You are a cyber threat intelligence assistant. \nI will provide you with an XML feed containing cybersecurity articles.\n\nYour task:\n1. Analyze the feed and extract ONLY items related to:\n   - Malware\n   - Advanced Persistent Threats (APTs)\n   - Vulnerabilities and CVEs\n   - Leaked credentials / data breaches\n   - Exploits and attacks\n\n2. For each relevant article, return only these details:\n   - Published Date (UTC format if available)\n   - Short Description (2–3 sentence summary)\n   - MITRE ATT&CK Tactics & Techniques (If not specified, analyze and add)\n   - Source Link\n\n3. Output MUST be in the following strict JSON format (no markdown, no extra text):\n\n{\n  \"reportDate\": \"YYYY-MM-DD\",\n  \"summary\": [\n    \"⚠️ Key threat 1 …\",\n    \"🐍 Key threat 2 …\",\n    \"🔒 Key threat 3 …\"\n  ],\n  \"articles\": [\n    {\n      \"date\": \"YYYY-MM-DD HH:MM:SS UTC\",\n      \"description\": \"Short summary of the article\",\n      \"mitre\": \"Comma separated list of tactics/techniques OR Not Specified\",\n      \"link\": \"https://original-source-link\"\n    }\n  ]\n}\n\nIMPORTANT:\n- \"summary\" must be an array of bullet points with relevant emojis.  \n- Always output ONLY valid JSON.\n- Do NOT include code fences (```json or ```).\n- Do NOT include explanations, text, or commentary.\n- Do NOT include markdown formatting.\n- Return JSON only.\n\nHere is the XML feed data to analyze:\n{{ $json.rawData }}",
+        "options": {}
+      },
+      "type": "@n8n/n8n-nodes-langchain.agent",
+      "typeVersion": 2.2,
+      "position": [
+        880,
+        144
+      ],
+      "id": "54c66178-f3d9-4e5f-8136-4a3a02bb665c",
+      "name": "AI Agent - Threat Feeds Filtering"
+    },
+    {
+      "parameters": {
+        "promptType": "define",
+        "text": "=You are a Cyber Threat Intelligence assistant.\n\nYour tasks:\n1. For each selected item:\n   - Visit the article URL.\n   - Analyze the article text.\n   - Extract ONLY relevant Indicators of Compromise (IOCs). Types: IP, Domain, URL, Email, Hashes (MD5, SHA1, SHA256), CVEs\n\n\nRules:\n- Generate CSV Data with below mentioned columns: \n- type: IP, Domain, URL, Hash, Email, CVE\n- value: the IOC itself\n- first_seen: today’s date if missing\n- source: 2–3 words describing the malware/campaign/actor from the article\n- confidence: High / Medium / Low based on article confidence\n- mitre_technique: relevant MITRE technique ID, else \"N/A\"\n- If you found results\n\tOutput Format (strict):\n\ttype,value,first_seen,source,confidence,mitre_technique\n- If you don't find results\n\tOutput Format(strict):\n\tNo Data\n\nHere are the URLs:  {{ $json.urls }}",
+        "options": {}
+      },
+      "type": "@n8n/n8n-nodes-langchain.agent",
+      "typeVersion": 2.2,
+      "position": [
+        1456,
+        144
+      ],
+      "id": "6f8f152f-c08d-42b0-b3e4-8b1e4e561598",
+      "name": "AI Agent - IOCs Extractor"
+    },
+    {
+      "parameters": {
+        "jsCode": "const raw = $input.first().json.output || \"\";\n\n// --- Normalize CSV text ---\nlet csv = raw\n  .replace(/^\\s*```(?:csv)?/i, \"\")\n  .replace(/```$/i, \"\")\n  .replace(/```/g, \"\")\n  .replace(/\\r\\n/g, \"\\n\")\n  .replace(/\\r/g, \"\\n\")\n  .trim();\n\nconst lines = csv.split(\"\\n\").map(l => l.trim()).filter(l => l.length);\nif (lines.length < 2) throw new Error(\"No IOC data found.\");\n\n// --- Parse CSV rows ---\nconst rows = lines.slice(1).map(line => {\n  const cols = line.split(\",\");\n  return {\n    type: (cols[0] || \"\").trim(),\n    value: (cols[1] || \"\").trim(),\n    first_seen: (cols[2] || \"\").trim(),\n    source: (cols[3] || \"\").trim(),\n    confidence: (cols[4] || \"\").trim(),\n    mitre: (cols[5] || \"\").trim(),\n    description: (cols[6] || \"\").trim() // optional column\n  };\n}).filter(r => r.value);\n\n// --- Helper for SPL string escaping ---\nconst esc = (s) => (s || \"\").replace(/\"/g, '\\\\\"');\n\n// --- Build search query (index search for IOCs) ---\nconst values = rows.map(r => r.value).filter(Boolean);\nif (values.length === 0) throw new Error(\"No IOC values found.\");\n\nconst evalCase = values.map(v => `searchmatch(\"${esc(v)}\"), \"${esc(v)}\"`).join(\", \");\nconst splunkSearchQuery =\n  `index=* (${values.map(v => `\"${esc(v)}\"`).join(\" OR \")})` +\n  ` | eval IOC=case(${evalCase}, true(), null())` +\n  ` | lookup threat_hunt_iocs.csv value as IOC OUTPUT type, source, confidence, mitre_technique, first_seen` +\n  ` | stats values(type) as IOC_Type values(source) as Source values(confidence) as Confidence values(mitre_technique) as MITRE values(host) as Matching_Hosts values(sourcetype) as SourceType values(index) as Index by IOC` +\n  ` | table IOC IOC_Type Source Confidence MITRE Matching_Hosts SourceType Index`;\n\n// --- Build lookup update query ---\nlet parts = [];\nrows.forEach((r, idx) => {\n  const base = idx === 0 ? \"| makeresults\" : \"| append [| makeresults]\";\n  const evalStr =\n    `${base} | eval ` +\n    `type=\"${esc(r.type)}\", ` +\n    `value=\"${esc(r.value)}\", ` +\n    `first_seen=\"${esc(r.first_seen)}\", ` +\n    `source=\"${esc(r.source)}\", ` +\n    `confidence=\"${esc(r.confidence)}\", ` +\n    `mitre_technique=\"${esc(r.mitre)}\", ` +\n    `description=\"${esc(r.description)}\"`;\n  parts.push(evalStr);\n});\n\nconst splunkLookupQuery =\n  parts.join(\" \") + \" | outputlookup append=true threat_hunt_iocs.csv\";\n\n// --- Return both ---\nreturn [{\n  json: {\n    splunkSearchQuery,\n    splunkLookupQuery\n  }\n}];\n"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        1808,
+        144
+      ],
+      "id": "9ae9f4da-3a6d-4214-bce6-bf4cad4062e2",
+      "name": "Splunk Query Builder - JS Code"
+    },
+    {
+      "parameters": {
+        "jsCode": "const data = $input.first().json.data; // your incoming JSON object/array\n\n// --- Escape unsafe XML/CSV characters ---\nfunction sanitizeValue(val) {\n  if (val === null || val === undefined) return \"\";\n  if (typeof val !== \"string\") val = String(val);\n  return val\n    .replace(/&/g, \"&amp;\")\n    .replace(/</g, \"&lt;\")\n    .replace(/>/g, \"&gt;\")\n    .replace(/\"/g, '\\\\\"')\n    .replace(/'/g, \"\\\\'\");\n}\n\n// --- Convert JSON to CSV-like raw text ---\nfunction jsonToRaw(json) {\n  let rows = [];\n  \n  if (Array.isArray(json)) {\n    // Handle array of objects\n    json.forEach(obj => {\n      let row = [];\n      for (let key in obj) {\n        row.push(`${key}=${sanitizeValue(obj[key])}`);\n      }\n      rows.push(row.join(\", \"));\n    });\n  } else if (typeof json === \"object\") {\n    // Handle single object\n    let row = [];\n    for (let key in json) {\n      row.push(`${key}=${sanitizeValue(json[key])}`);\n    }\n    rows.push(row.join(\", \"));\n  }\n  \n  return rows.join(\"\\n\");\n}\n\nreturn {\n  rawData: jsonToRaw(data)\n};\n"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        656,
+        144
+      ],
+      "id": "785db535-5b41-43bf-ba4d-b6ac0ea1e923",
+      "name": "Convert JSON to RAW Data"
+    },
+    {
+      "parameters": {
+        "search": "=search {{ $json.splunkSearchQuery }}",
+        "additionalFields": {}
+      },
+      "type": "n8n-nodes-base.splunk",
+      "typeVersion": 2,
+      "position": [
+        2928,
+        144
+      ],
+      "id": "1ac50223-71cd-45cc-aa70-4e9b75167b66",
+      "name": "Run IOC Hunt Query",
+      "credentials": {
+        "splunkApi": {
+          "id": "YRnBMBY2npQxzExR",
+          "name": "Splunk account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "search": "={{ $json.splunkLookupQuery }}",
+        "additionalFields": {}
+      },
+      "type": "n8n-nodes-base.splunk",
+      "typeVersion": 2,
+      "position": [
+        2032,
+        144
+      ],
+      "id": "47aefca8-b84a-4183-81fc-fc27bdf606cc",
+      "name": "Update Lookup with IOCs",
+      "credentials": {
+        "splunkApi": {
+          "id": "YRnBMBY2npQxzExR",
+          "name": "Splunk account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "operation": "getResult",
+        "searchJobId": {
+          "__rl": true,
+          "value": "={{ $json.id }}",
+          "mode": "id"
+        },
+        "filters": {},
+        "options": {}
+      },
+      "type": "n8n-nodes-base.splunk",
+      "typeVersion": 2,
+      "position": [
+        3152,
+        144
+      ],
+      "id": "d4c34fda-008b-42ed-8a12-3db1a5774e01",
+      "name": "Get the result of IOC Hunt Query",
+      "credentials": {
+        "splunkApi": {
+          "id": "YRnBMBY2npQxzExR",
+          "name": "Splunk account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "operation": "getResult",
+        "searchJobId": {
+          "__rl": true,
+          "value": "={{ $json.id }}",
+          "mode": "id"
+        },
+        "filters": {},
+        "options": {}
+      },
+      "type": "n8n-nodes-base.splunk",
+      "typeVersion": 2,
+      "position": [
+        2256,
+        144
+      ],
+      "id": "4dfd1844-3492-4784-a584-7162038142d3",
+      "name": "Get the result of a search job",
+      "credentials": {
+        "splunkApi": {
+          "id": "YRnBMBY2npQxzExR",
+          "name": "Splunk account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "search": "| inputlookup threat_hunt_iocs.csv \n| dedup value | outputlookup threat_hunt_iocs.csv",
+        "additionalFields": {}
+      },
+      "type": "n8n-nodes-base.splunk",
+      "typeVersion": 2,
+      "position": [
+        2480,
+        144
+      ],
+      "id": "a2756319-2ed2-48c3-a0c3-a9a3be4ff139",
+      "name": "Remove Lookup Duplicates",
+      "credentials": {
+        "splunkApi": {
+          "id": "YRnBMBY2npQxzExR",
+          "name": "Splunk account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "operation": "getResult",
+        "searchJobId": {
+          "__rl": true,
+          "value": "={{ $json.id }}",
+          "mode": "id"
+        },
+        "filters": {},
+        "options": {}
+      },
+      "type": "n8n-nodes-base.splunk",
+      "typeVersion": 2,
+      "position": [
+        2704,
+        144
+      ],
+      "id": "59f3cdc5-091a-47be-b969-4472797c8f61",
+      "name": "Get the Search Results",
+      "credentials": {
+        "splunkApi": {
+          "id": "YRnBMBY2npQxzExR",
+          "name": "Splunk account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "jsCode": "const results = $input.first().json.results || [];\nconst searchQuery = $input.first().json.splunkSearchQuery || 'index=*';   // Pass query from model\n\n// --- Case 1: No results found ---\nif (results.length === 0) {\n  return [{\n    json: {\n      subject: \"✅ Threat Hunt Report – No IOC Matches Found\",\n      body: `\n<html>\n  <body style=\"font-family: Arial, sans-serif; color:#333;\">\n    <p>Hello Team,</p>\n\n    <p>The automated threat hunt workflow has completed execution against the latest data sources.</p>\n\n    <p><b>Summary:</b></p>\n    <ul>\n      <li>No Indicators of Compromise (IOCs) were matched in the environment.</li>\n      <li>Sources checked: nessus, endpoint telemetry, security logs.</li>\n    </ul>\n\n    <p><b>Action Required:</b></p>\n    <ul>\n      <li>No immediate action is required.</li>\n      <li>Monitoring will continue as per the hunt schedule.</li>\n    </ul>\n\n\n    <p>Regards,<br/>Threat Hunting Automation System</p>\n  </body>\n</html>\n      `.trim()\n    }\n  }];\n}\n\n// --- Case 2: Results found ---\nlet tableRows = results.map(r => `\n  <tr>\n    <td>${r.IOC || \"-\"}</td>\n    <td>${r.IOC_Type || \"-\"}</td>\n    <td>${r.Source || \"-\"}</td>\n    <td>${r.Confidence || \"-\"}</td>\n    <td>${r.MITRE || \"-\"}</td>\n    <td>${r.Matching_Hosts || \"-\"}</td>\n    <td>${r.SourceType || \"-\"}</td>\n    <td>${r.Index || \"-\"}</td>\n  </tr>\n`).join(\"\\n\");\n\nconst emailBody = `\n<html>\n  <body style=\"font-family: Arial, sans-serif; color:#333;\">\n    <p>Hello Team,</p>\n\n    <p>The automated threat hunt workflow has detected matches for known Indicators of Compromise (IOCs). Please find the details below:</p>\n\n    <table border=\"1\" cellpadding=\"6\" cellspacing=\"0\" style=\"border-collapse:collapse; font-size:14px;\">\n      <thead style=\"background:#f2f2f2;\">\n        <tr>\n          <th>IOC</th>\n          <th>Type</th>\n          <th>Source</th>\n          <th>Confidence</th>\n          <th>MITRE</th>\n          <th>Matching Hosts</th>\n          <th>SourceType</th>\n          <th>Index</th>\n        </tr>\n      </thead>\n      <tbody>\n        ${tableRows}\n      </tbody>\n    </table>\n\n   \n    <p><b>Action Required:</b></p>\n    <ul>\n      <li>Investigate the impacted host(s).</li>\n      <li>Review associated vulnerabilities.</li>\n      <li>Validate against endpoint logs, firewall data, and recent alerts.</li>\n      <li>Escalate to Incident Response if exploitation is confirmed.</li>\n    </ul>\n\n    <p>Regards,<br/>Threat Hunting Automation System</p>\n  </body>\n</html>\n`.trim();\n\nreturn [{\n  json: {\n    subject: \"🚨 Threat Hunt Alert – IOC Matches Detected\",\n    body: emailBody\n  }\n}];\n"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        3360,
+        144
+      ],
+      "id": "b0740edd-6f8f-4f7d-95c1-7a87368e56c2",
+      "name": "Email Crafter"
+    },
+    {
+      "parameters": {
+        "sendTo": "sanglap.patra@outlook.com",
+        "subject": "={{ $json.subject }}",
+        "message": "={{ $json.body }}",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.gmail",
+      "typeVersion": 2.1,
+      "position": [
+        3568,
+        144
+      ],
+      "id": "64f85a66-e21b-4bbf-bce1-715156eaecbf",
+      "name": "Send a message",
+      "webhookId": "8d045103-8aff-4688-bbc7-7b9a7b80a096",
+      "credentials": {
+        "gmailOAuth2": {
+          "id": "z34YpSUcxts09lgE",
+          "name": "Gmail account"
+        }
+      }
+    }
+  ],
+  "pinData": {},
+  "connections": {
+    "Schedule Trigger": {
+      "main": [
+        [
+          {
+            "node": "RSS Read - DarkReading",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "RSS Read - ThreatPost",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "RSS Read - HackerNews",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "RSS Read - KrebsonSecurity",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "RSS Read - CISA Gov",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "RSS Read - FeedBurner",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "RSS Read - DarkReading": {
+      "main": [
+        [
+          {
+            "node": "Merge",
+            "type": "main",
+            "index": 2
+          }
+        ]
+      ]
+    },
+    "RSS Read - ThreatPost": {
+      "main": [
+        [
+          {
+            "node": "Merge",
+            "type": "main",
+            "index": 1
+          }
+        ]
+      ]
+    },
+    "RSS Read - HackerNews": {
+      "main": [
+        [
+          {
+            "node": "Merge",
+            "type": "main",
+            "index": 3
+          }
+        ]
+      ]
+    },
+    "RSS Read - FeedBurner": {
+      "main": [
+        [
+          {
+            "node": "Merge",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "RSS Read - KrebsonSecurity": {
+      "main": [
+        [
+          {
+            "node": "Merge",
+            "type": "main",
+            "index": 4
+          }
+        ]
+      ]
+    },
+    "RSS Read - CISA Gov": {
+      "main": [
+        [
+          {
+            "node": "Merge",
+            "type": "main",
+            "index": 5
+          }
+        ]
+      ]
+    },
+    "Merge": {
+      "main": [
+        [
+          {
+            "node": "Filter",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Filter": {
+      "main": [
+        [
+          {
+            "node": "Aggregate",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Aggregate": {
+      "main": [
+        [
+          {
+            "node": "Convert JSON to RAW Data",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Google Gemini Chat Model": {
+      "ai_languageModel": [
+        [
+          {
+            "node": "AI Agent - Threat Feeds Filtering",
+            "type": "ai_languageModel",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Format JSON Data - JS Code": {
+      "main": [
+        [
+          {
+            "node": "AI Agent - IOCs Extractor",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Google Gemini Chat Model1": {
+      "ai_languageModel": [
+        [
+          {
+            "node": "AI Agent - IOCs Extractor",
+            "type": "ai_languageModel",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "AI Agent - Threat Feeds Filtering": {
+      "main": [
+        [
+          {
+            "node": "Format JSON Data - JS Code",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "AI Agent - IOCs Extractor": {
+      "main": [
+        [
+          {
+            "node": "Splunk Query Builder - JS Code",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Convert JSON to RAW Data": {
+      "main": [
+        [
+          {
+            "node": "AI Agent - Threat Feeds Filtering",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Splunk Query Builder - JS Code": {
+      "main": [
+        [
+          {
+            "node": "Update Lookup with IOCs",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Run IOC Hunt Query": {
+      "main": [
+        [
+          {
+            "node": "Get the result of IOC Hunt Query",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Update Lookup with IOCs": {
+      "main": [
+        [
+          {
+            "node": "Get the result of a search job",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Get the result of a search job": {
+      "main": [
+        [
+          {
+            "node": "Remove Lookup Duplicates",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Remove Lookup Duplicates": {
+      "main": [
+        [
+          {
+            "node": "Get the Search Results",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Get the Search Results": {
+      "main": [
+        [
+          {
+            "node": "Run IOC Hunt Query",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Get the result of IOC Hunt Query": {
+      "main": [
+        [
+          {
+            "node": "Email Crafter",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Email Crafter": {
+      "main": [
+        [
+          {
+            "node": "Send a message",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": false,
+  "settings": {
+    "executionOrder": "v1",
+    "timezone": "Asia/Kolkata",
+    "callerPolicy": "workflowsFromSameOwner"
+  },
+  "versionId": "eb14f578-47f6-4761-8de0-10c1bb15e11a",
+  "meta": {
+    "templateCredsSetupCompleted": true,
+    "instanceId": "c0dab8cfa67ec9a6f9ebfdb3c6d9f6c048e1c6eef2d0da40e01469c3abc349fd"
+  },
+  "id": "0ImwhF7Llni1L01D",
+  "tags": []
+}

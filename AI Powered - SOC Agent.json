@@ -1,0 +1,845 @@
+{
+  "name": "AI Powered - SOC Agent",
+  "nodes": [
+    {
+      "parameters": {
+        "options": {}
+      },
+      "type": "@n8n/n8n-nodes-langchain.lmChatGoogleGemini",
+      "typeVersion": 1,
+      "position": [
+        968,
+        -496
+      ],
+      "id": "1bbb2c27-31a8-4636-92e9-a4655ea71b33",
+      "name": "Google Gemini Chat Model",
+      "credentials": {
+        "googlePalmApi": {
+          "id": "voKan8YQAGWTWe5d",
+          "name": "Google Gemini(PaLM) Api account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "sessionIdType": "customKey",
+        "sessionKey": "={{ $('WhatsApp Receive Message').item.json.contacts[0].wa_id }}\n",
+        "contextWindowLength": 100
+      },
+      "type": "@n8n/n8n-nodes-langchain.memoryBufferWindow",
+      "typeVersion": 1.3,
+      "position": [
+        1096,
+        -496
+      ],
+      "id": "ab83c626-3516-4260-aeff-e6723c320f88",
+      "name": "Simple Memory"
+    },
+    {
+      "parameters": {
+        "updates": [
+          "messages"
+        ],
+        "options": {}
+      },
+      "type": "n8n-nodes-base.whatsAppTrigger",
+      "typeVersion": 1,
+      "position": [
+        -384,
+        -720
+      ],
+      "id": "c48614e6-d736-4359-8d99-2613d80aa9cf",
+      "name": "WhatsApp Receive Message",
+      "webhookId": "eb27f4f7-e546-4ec0-b003-e3e1f7914b00",
+      "credentials": {
+        "whatsAppTriggerApi": {
+          "id": "Aknj8JPhbiHWimln",
+          "name": "WhatsApp OAuth account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "rules": {
+          "values": [
+            {
+              "conditions": {
+                "options": {
+                  "caseSensitive": true,
+                  "leftValue": "",
+                  "typeValidation": "strict",
+                  "version": 2
+                },
+                "conditions": [
+                  {
+                    "leftValue": "={{ $json.messages[0].audio }}",
+                    "rightValue": "audio",
+                    "operator": {
+                      "type": "object",
+                      "operation": "exists",
+                      "singleValue": true
+                    },
+                    "id": "0085e0e9-922d-4ca9-992e-c0997e3e40b0"
+                  }
+                ],
+                "combinator": "and"
+              },
+              "renameOutput": true,
+              "outputKey": "Audio Input"
+            },
+            {
+              "conditions": {
+                "options": {
+                  "caseSensitive": true,
+                  "leftValue": "",
+                  "typeValidation": "strict",
+                  "version": 2
+                },
+                "conditions": [
+                  {
+                    "id": "6c66101a-c955-4b7c-89fa-b6b4c168149d",
+                    "leftValue": "={{ $json.messages[0].text }}",
+                    "rightValue": "",
+                    "operator": {
+                      "type": "object",
+                      "operation": "exists",
+                      "singleValue": true
+                    }
+                  }
+                ],
+                "combinator": "and"
+              },
+              "renameOutput": true,
+              "outputKey": "Text Input"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.switch",
+      "typeVersion": 3.2,
+      "position": [
+        -160,
+        -720
+      ],
+      "id": "24bf0baf-c011-4ebc-8c5a-09f14a1b0de3",
+      "name": "WhatsApp message Input Type"
+    },
+    {
+      "parameters": {
+        "resource": "media",
+        "operation": "mediaUrlGet",
+        "mediaGetId": "={{ $json.messages[0].audio.id }}"
+      },
+      "type": "n8n-nodes-base.whatsApp",
+      "typeVersion": 1,
+      "position": [
+        64,
+        -792
+      ],
+      "id": "d4278bfd-3fb6-4ab6-b4d1-3447155103a0",
+      "name": "WhatsApp - Get Audio URL",
+      "webhookId": "3a1161be-2e58-4c6f-b91c-5d24547e1483",
+      "credentials": {
+        "whatsAppApi": {
+          "id": "ovzRWI8EUCVozOeJ",
+          "name": "WhatsApp account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "resource": "audio",
+        "modelId": {
+          "__rl": true,
+          "value": "models/gemini-1.5-pro-latest",
+          "mode": "list",
+          "cachedResultName": "models/gemini-1.5-pro-latest"
+        },
+        "inputType": "binary",
+        "options": {}
+      },
+      "type": "@n8n/n8n-nodes-langchain.googleGemini",
+      "typeVersion": 1,
+      "position": [
+        512,
+        -792
+      ],
+      "id": "37e083a5-7274-4331-95b0-c87421b3e884",
+      "name": "Transcribe a recording",
+      "credentials": {
+        "googlePalmApi": {
+          "id": "voKan8YQAGWTWe5d",
+          "name": "Google Gemini(PaLM) Api account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "url": "={{ $json.url }}",
+        "authentication": "predefinedCredentialType",
+        "nodeCredentialType": "httpBearerAuth",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        288,
+        -792
+      ],
+      "id": "b744dee8-7339-40f1-8b7e-b4a11fa21be5",
+      "name": "Download Audio URL",
+      "credentials": {
+        "httpHeaderAuth": {
+          "id": "Jju8Bu9eoSjnXLyc",
+          "name": "Header Auth account"
+        },
+        "httpBearerAuth": {
+          "id": "vZVj7LHyJRhszTIu",
+          "name": "Bearer Auth account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "219577d5-b028-48fc-90be-980f4171ab68",
+              "name": "text",
+              "value": "={{ $json.content.parts[0].text }}{{ $('WhatsApp Receive Message').item.json.messages[0].text.body }}",
+              "type": "string"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [
+        736,
+        -720
+      ],
+      "id": "ed4b105e-c096-475e-96f5-1f11f5f1cf28",
+      "name": "User Message"
+    },
+    {
+      "parameters": {
+        "resource": "audio",
+        "input": "={{ $('SOC Query Generator ChatBot').item.json.output }}",
+        "voice": "nova",
+        "options": {}
+      },
+      "type": "@n8n/n8n-nodes-langchain.openAi",
+      "typeVersion": 1.8,
+      "position": [
+        1760,
+        -624
+      ],
+      "id": "23c53a6f-88c0-4fbb-bf9c-55a5084bc1af",
+      "name": "Generate audio",
+      "credentials": {
+        "openAiApi": {
+          "id": "PMlQ85HP0BYVlxNP",
+          "name": "OpenAi account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "jsCode": "// Loop over input items and change the MIME type of binary data\nfor (const item of $input.all()) {\n  // Check if the item has binary data\n  if (item.binary) {\n    // Find the binary property name (assuming there's at least one)\n    const binaryPropertyNames = Object.keys(item.binary);\n    \n    for (const propName of binaryPropertyNames) {\n      // If the MIME type is 'audio/mp3', change it to 'audio/mpeg'\n      if (item.binary[propName].mimeType === 'audio/mp3') {\n        item.binary[propName].mimeType = 'audio/mpeg';\n      }\n    }\n  }\n}\n\nreturn $input.all();"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        1984,
+        -624
+      ],
+      "id": "b77221b9-dd74-49f3-90d2-e16ed9278738",
+      "name": "Fix Mime Type"
+    },
+    {
+      "parameters": {
+        "operation": "send",
+        "phoneNumberId": "831635526689280",
+        "recipientPhoneNumber": "919875569359",
+        "messageType": "audio",
+        "mediaPath": "useMedian8n",
+        "additionalFields": {}
+      },
+      "type": "n8n-nodes-base.whatsApp",
+      "typeVersion": 1,
+      "position": [
+        2208,
+        -624
+      ],
+      "id": "0c07d1c4-88f0-41b6-a419-dd46319f9835",
+      "name": "Respond with Audio",
+      "webhookId": "d18b2c98-84e4-43cf-a532-0c47d5161684",
+      "credentials": {
+        "whatsAppApi": {
+          "id": "ovzRWI8EUCVozOeJ",
+          "name": "WhatsApp account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "search": "=search  {{ $json.spl_query }}",
+        "additionalFields": {}
+      },
+      "type": "n8n-nodes-base.splunk",
+      "typeVersion": 2,
+      "position": [
+        1760,
+        -816
+      ],
+      "id": "c4f8c4fc-6e63-47f3-a247-cce00ea18849",
+      "name": "Create a search job",
+      "credentials": {
+        "splunkApi": {
+          "id": "cRzFMwOEUjQgPbFQ",
+          "name": "Splunk account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "operation": "getResult",
+        "searchJobId": {
+          "__rl": true,
+          "value": "={{ $json.id }}",
+          "mode": "id"
+        },
+        "filters": {},
+        "options": {}
+      },
+      "type": "n8n-nodes-base.splunk",
+      "typeVersion": 2,
+      "position": [
+        1984,
+        -816
+      ],
+      "id": "0c0223ba-d096-4392-9f14-7c86115604e0",
+      "name": "Get the result of a search job",
+      "credentials": {
+        "splunkApi": {
+          "id": "cRzFMwOEUjQgPbFQ",
+          "name": "Splunk account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 2
+          },
+          "conditions": [
+            {
+              "id": "62826ee5-c1ce-4e74-bc24-ec7861ee3983",
+              "leftValue": "={{ $json.output }}",
+              "rightValue": "index=",
+              "operator": {
+                "type": "string",
+                "operation": "contains"
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.2,
+      "position": [
+        1312,
+        -720
+      ],
+      "id": "ed545632-6b70-4b8b-abae-a5d5f8624de8",
+      "name": "Check for Splunk Query in Output"
+    },
+    {
+      "parameters": {
+        "jsCode": "const msg = $input.first().json.output;\nconst regex = /```json([\\s\\S]*?)```/;\nconst match = msg.match(regex);\n\nif (match) {\n  return JSON.parse(match[1]);\n} else {\n  return { \"chat_output\": msg };\n}\n"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        1536,
+        -816
+      ],
+      "id": "6ded877a-8de2-473d-ac11-fe05fbe81e80",
+      "name": "Sanitize & extract Splunk Query"
+    },
+    {
+      "parameters": {
+        "options": {}
+      },
+      "type": "@n8n/n8n-nodes-langchain.lmChatGoogleGemini",
+      "typeVersion": 1,
+      "position": [
+        2440,
+        -592
+      ],
+      "id": "fa30fc10-edb7-4615-8c68-168942ca4a08",
+      "name": "Google Gemini Chat Model1",
+      "credentials": {
+        "googlePalmApi": {
+          "id": "voKan8YQAGWTWe5d",
+          "name": "Google Gemini(PaLM) Api account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "sessionIdType": "customKey",
+        "sessionKey": "={{ $('WhatsApp Receive Message').item.json.contacts[0].wa_id }}",
+        "contextWindowLength": 10
+      },
+      "type": "@n8n/n8n-nodes-langchain.memoryBufferWindow",
+      "typeVersion": 1.3,
+      "position": [
+        2568,
+        -592
+      ],
+      "id": "55614621-4d00-4b6b-b53c-899552fbd9c2",
+      "name": "Simple Memory1"
+    },
+    {
+      "parameters": {
+        "jsCode": "// n8n Function Node\n// Extract all _raw values from Splunk results into one text block\n\nlet logs = [];\n\n// Loop through each incoming item\nfor (const item of items) {\n  // Check if results array exists\n  if (item.json.results && Array.isArray(item.json.results)) {\n    for (const res of item.json.results) {\n      if (res._raw) {\n        logs.push(res._raw);\n      }\n    }\n  }\n}\n\n// Return as single text block (newline-separated)\nreturn [\n  {\n    json: {\n      raw: logs.join(\"\\n\")\n    }\n  }\n];\n"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        2208,
+        -816
+      ],
+      "id": "b69c4e78-4cc7-486d-8c52-59273aea31d6",
+      "name": "Sanitize the Results"
+    },
+    {
+      "parameters": {
+        "promptType": "define",
+        "text": "=You are AI Powered – SOC Agent, an intelligent assistant for SIEM log analysis.\n\nResponsibilities\nChatbot behavior\n\nGreet warmly if the user says “hi” or “hello.”\n\nIntroduce yourself as an AI assistant for SOC investigations.\n\nKeep chat replies clear, professional, and always under 1000 characters.\n\nIf no Splunk query is needed, respond only with a chat message.\n\nSplunk query generation\n\nWhen asked to check logs, investigate accounts, detect abnormal logins, or analyze security events:\n\nTranslate the request into a valid Splunk SPL query.\n\nUse these predefined indexes:\n\nAzure Authentication logs → index=azure_logs sourcetype=signinlogs\n\nAzure Audit Logs → index=azure_logs sourcetype=auditlogs\n\nSecurity logs → index=security_logs\n\nEndpoint telemetry → index=endpoints\n\nVulnerability scans → index=nessus\n\nDefault time window: earliest=-24h latest=now unless specified.\n\nWhen inserting user names, IPs, or search terms, do not map them to fields (e.g., user=, ip=).\n\nInstead, always keep them as raw quoted text for open search.\n\nExample: \"sanglap.patra\", \"192.168.1.5\".\n\nExecution instructions\n\nIf a query is required, return it in pure JSON only with this format:\n\n{\n  \"spl_query\": \"<SPL query here>\",\n  \"action\": \"execute_splunk_query\"\n}\n\nTone & interaction\n\nBefore returning a query, confirm the task clearly:\n“Got it, checking abnormal logins for user X in the last 24h.”\n\nIf the input is vague, ask a clarifying question instead of guessing.\n\nAlways be concise, structured, and security-focused.\n\nExample Interactions\n\nUser: Hi\nAssistant: Hello 👋 I’m AI Powered – SOC Agent. I help analyze Splunk logs for threats and anomalies. What should I check today?\n\nUser: Look for abnormal logins for user sanglap.patra\nAssistant: Got it ✅. Checking authentication logs for user sanglap.patra (last 24h).\n\n{\n  \"spl_query\": \"index=azure_logs sourcetype=signinlogs \\\"sanglap.patra\\\" earliest=-24h latest=now\",\n  \"action\": \"execute_splunk_query\"\n}\n\n\nUser: Show me password reset events for user sanglap.patra\nAssistant: Got it ✅. Checking audit logs for password reset activity for sanglap.patra (last 24h).\n\n{\n  \"spl_query\": \"index=azure_logs sourcetype=auditlogs \\\"sanglap.patra\\\" \\\"PasswordReset\\\" earliest=-24h latest=now\",\n  \"action\": \"execute_splunk_query\"\n}\n\n\nUser: Any MFA device changes for sanglap.patra\nAssistant: Got it ✅. Checking audit logs for MFA device changes for sanglap.patra (last 24h).\n\n{\n  \"spl_query\": \"index=azure_logs sourcetype=auditlogs \\\"sanglap.patra\\\" \\\"MFADeviceChange\\\" earliest=-24h latest=now\",\n  \"action\": \"execute_splunk_query\"\n}\n\n\nUser: Check failed logins from IP 192.168.10.55\nAssistant: Got it ✅. Checking authentication logs for failed logins from IP 192.168.10.55 (last 24h).\n\n{\n  \"spl_query\": \"index=azure_logs sourcetype=signinlogs \\\"192.168.10.55\\\" \\\"FailedLoginAttempt\\\" earliest=-24h latest=now\",\n  \"action\": \"execute_splunk_query\"\n}\n\n\nUser: Show endpoint activity for process powershell.exe\nAssistant: Got it ✅. Checking endpoint telemetry for process powershell.exe (last 24h).\n\n{\n  \"spl_query\": \"index=endpoints \\\"powershell.exe\\\" earliest=-24h latest=now\",\n  \"action\": \"execute_splunk_query\"\n}\n\n----------------------------------\n\nHere is user input:\n{{ $json.text }}",
+        "options": {}
+      },
+      "type": "@n8n/n8n-nodes-langchain.agent",
+      "typeVersion": 2.2,
+      "position": [
+        960,
+        -720
+      ],
+      "id": "4e496afe-7512-4510-b5dc-d80e2a829afe",
+      "name": "SOC Query Generator ChatBot"
+    },
+    {
+      "parameters": {
+        "promptType": "define",
+        "text": "=You are AI Powered – SOC Agent, an intelligent assistant for SIEM log analysis.\n\nResponsibilities:\n\nTake raw Splunk query results as input ({{ $json.raw }}).\n\nParse and analyze login data (username, IP, geo-location, login result, failure reason).\n\nIdentify suspicious activity such as:\n\nMultiple failed logins for the same user\n\nLogins from unusual countries or new IPs\n\nConditional Access blocks, account lockouts, or invalid password attempts\n\nLogins from different locations within short timeframes (impossible travel)\n\nOutput format:\n\nAlways under 500 characters\n\nStart with the anomaly type (e.g., “Brute-force attempt” / “Suspicious geo-login”)\n\nList affected user(s), IP(s), and location(s)\n\nMention reasons (e.g., invalid password, lockout, Conditional Access block)\n\nIf no anomalies found, respond with:\nNo abnormal activity detected in the requested logs for the given timeframe.\n\n🔹 Example Outputs\n\nCase 1 – Failed Logins:\nMultiple failed logins for sanglap.patra from 192.0.2.25 (Germany) and 198.51.100.10 (France). Failures due to invalid password and Conditional Access block. Possible brute-force attempt.\n\nCase 2 – Suspicious Geo Access:\nUser alice.w logged in successfully from France after failed attempts from US within minutes. Possible impossible travel or credential compromise.\n\nCase 3 – No Issues:\nNo abnormal activity detected in the requested logs for the given timeframe.",
+        "options": {}
+      },
+      "type": "@n8n/n8n-nodes-langchain.agent",
+      "typeVersion": 2.2,
+      "position": [
+        2432,
+        -816
+      ],
+      "id": "d76d6fc4-047d-49a7-b16c-7b6dd7030eee",
+      "name": "SOC Analysis Chatbot"
+    },
+    {
+      "parameters": {
+        "operation": "send",
+        "phoneNumberId": "831635526689280",
+        "recipientPhoneNumber": "919875569359",
+        "textBody": "={{ $json.output }}",
+        "additionalFields": {}
+      },
+      "type": "n8n-nodes-base.whatsApp",
+      "typeVersion": 1,
+      "position": [
+        1536,
+        -624
+      ],
+      "id": "9f6e05bf-8c1e-4dfc-9605-f0bcf1e54f02",
+      "name": "Send message",
+      "webhookId": "276c9a83-1250-4940-abc8-64dad32b2e74",
+      "credentials": {
+        "whatsAppApi": {
+          "id": "ovzRWI8EUCVozOeJ",
+          "name": "WhatsApp account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "resource": "audio",
+        "input": "={{ $('SOC Analysis Chatbot').item.json.output }}",
+        "voice": "nova",
+        "options": {}
+      },
+      "type": "@n8n/n8n-nodes-langchain.openAi",
+      "typeVersion": 1.8,
+      "position": [
+        3008,
+        -816
+      ],
+      "id": "59f20f67-88a2-49fc-a9b7-af805f4a91eb",
+      "name": "Generate audio1",
+      "credentials": {
+        "openAiApi": {
+          "id": "PMlQ85HP0BYVlxNP",
+          "name": "OpenAi account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "jsCode": "// Loop over input items and change the MIME type of binary data\nfor (const item of $input.all()) {\n  // Check if the item has binary data\n  if (item.binary) {\n    // Find the binary property name (assuming there's at least one)\n    const binaryPropertyNames = Object.keys(item.binary);\n    \n    for (const propName of binaryPropertyNames) {\n      // If the MIME type is 'audio/mp3', change it to 'audio/mpeg'\n      if (item.binary[propName].mimeType === 'audio/mp3') {\n        item.binary[propName].mimeType = 'audio/mpeg';\n      }\n    }\n  }\n}\n\nreturn $input.all();"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        3232,
+        -816
+      ],
+      "id": "64851d8b-2f67-4b43-9f91-23d463781168",
+      "name": "Fix Mime Type1"
+    },
+    {
+      "parameters": {
+        "operation": "send",
+        "phoneNumberId": "831635526689280",
+        "recipientPhoneNumber": "919875569359",
+        "messageType": "audio",
+        "mediaPath": "useMedian8n",
+        "additionalFields": {}
+      },
+      "type": "n8n-nodes-base.whatsApp",
+      "typeVersion": 1,
+      "position": [
+        3456,
+        -816
+      ],
+      "id": "d6f7e48e-cd45-4762-8c81-60f92e5985fd",
+      "name": "Respond with Audio1",
+      "webhookId": "d18b2c98-84e4-43cf-a532-0c47d5161684",
+      "credentials": {
+        "whatsAppApi": {
+          "id": "ovzRWI8EUCVozOeJ",
+          "name": "WhatsApp account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "operation": "send",
+        "phoneNumberId": "831635526689280",
+        "recipientPhoneNumber": "919875569359",
+        "textBody": "={{ $json.output }}",
+        "additionalFields": {}
+      },
+      "type": "n8n-nodes-base.whatsApp",
+      "typeVersion": 1,
+      "position": [
+        2784,
+        -816
+      ],
+      "id": "3483ee99-4299-4b36-84eb-87ca33e6388a",
+      "name": "Send message1",
+      "webhookId": "276c9a83-1250-4940-abc8-64dad32b2e74",
+      "credentials": {
+        "whatsAppApi": {
+          "id": "ovzRWI8EUCVozOeJ",
+          "name": "WhatsApp account"
+        }
+      }
+    }
+  ],
+  "pinData": {},
+  "connections": {
+    "Google Gemini Chat Model": {
+      "ai_languageModel": [
+        [
+          {
+            "node": "SOC Query Generator ChatBot",
+            "type": "ai_languageModel",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Simple Memory": {
+      "ai_memory": [
+        [
+          {
+            "node": "SOC Query Generator ChatBot",
+            "type": "ai_memory",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "WhatsApp Receive Message": {
+      "main": [
+        [
+          {
+            "node": "WhatsApp message Input Type",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "WhatsApp message Input Type": {
+      "main": [
+        [
+          {
+            "node": "WhatsApp - Get Audio URL",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "User Message",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "WhatsApp - Get Audio URL": {
+      "main": [
+        [
+          {
+            "node": "Download Audio URL",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Transcribe a recording": {
+      "main": [
+        [
+          {
+            "node": "User Message",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Download Audio URL": {
+      "main": [
+        [
+          {
+            "node": "Transcribe a recording",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "User Message": {
+      "main": [
+        [
+          {
+            "node": "SOC Query Generator ChatBot",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Fix Mime Type": {
+      "main": [
+        [
+          {
+            "node": "Respond with Audio",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Generate audio": {
+      "main": [
+        [
+          {
+            "node": "Fix Mime Type",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Create a search job": {
+      "main": [
+        [
+          {
+            "node": "Get the result of a search job",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Get the result of a search job": {
+      "main": [
+        [
+          {
+            "node": "Sanitize the Results",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Check for Splunk Query in Output": {
+      "main": [
+        [
+          {
+            "node": "Sanitize & extract Splunk Query",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Send message",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Sanitize & extract Splunk Query": {
+      "main": [
+        [
+          {
+            "node": "Create a search job",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Google Gemini Chat Model1": {
+      "ai_languageModel": [
+        [
+          {
+            "node": "SOC Analysis Chatbot",
+            "type": "ai_languageModel",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Simple Memory1": {
+      "ai_memory": [
+        [
+          {
+            "node": "SOC Analysis Chatbot",
+            "type": "ai_memory",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Sanitize the Results": {
+      "main": [
+        [
+          {
+            "node": "SOC Analysis Chatbot",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "SOC Query Generator ChatBot": {
+      "main": [
+        [
+          {
+            "node": "Check for Splunk Query in Output",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "SOC Analysis Chatbot": {
+      "main": [
+        [
+          {
+            "node": "Send message1",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Send message": {
+      "main": [
+        [
+          {
+            "node": "Generate audio",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Generate audio1": {
+      "main": [
+        [
+          {
+            "node": "Fix Mime Type1",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Fix Mime Type1": {
+      "main": [
+        [
+          {
+            "node": "Respond with Audio1",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Send message1": {
+      "main": [
+        [
+          {
+            "node": "Generate audio1",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": false,
+  "settings": {
+    "executionOrder": "v1"
+  },
+  "versionId": "8e76a978-f234-4c5a-95b4-619e947ddb0e",
+  "meta": {
+    "templateCredsSetupCompleted": true,
+    "instanceId": "e00565081d89327fe9ca0384471cef79dd76bbeb281e5301e0675164a9bce7c9"
+  },
+  "id": "pbzldxY9zep83xko",
+  "tags": []
+}

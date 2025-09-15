@@ -1,0 +1,396 @@
+{
+  "name": "AI Powered - Stock Market News",
+  "nodes": [
+    {
+      "parameters": {
+        "rule": {
+          "interval": [
+            {
+              "triggerAtHour": 7
+            }
+          ]
+        }
+      },
+      "type": "n8n-nodes-base.scheduleTrigger",
+      "typeVersion": 1.2,
+      "position": [
+        -496,
+        48
+      ],
+      "id": "cf320256-b47b-4f37-8ff4-3cb82ab4ba3b",
+      "name": "Schedule Trigger"
+    },
+    {
+      "parameters": {
+        "url": "https://economictimes.indiatimes.com/markets/rssfeeds/1977021501.cms",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.rssFeedRead",
+      "typeVersion": 1.2,
+      "position": [
+        -272,
+        -240
+      ],
+      "id": "321084a5-fac8-43e7-8d99-b9cdecbea5fb",
+      "name": "India Times"
+    },
+    {
+      "parameters": {
+        "url": "https://www.livemint.com/rss/markets",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.rssFeedRead",
+      "typeVersion": 1.2,
+      "position": [
+        -272,
+        -48
+      ],
+      "id": "290d6663-3cea-4d87-a677-8e5294798e18",
+      "name": "Live Mint"
+    },
+    {
+      "parameters": {
+        "url": "https://www.cnbc.com/id/100003114/device/rss/rss.html",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.rssFeedRead",
+      "typeVersion": 1.2,
+      "position": [
+        -272,
+        144
+      ],
+      "id": "7cd9ca9f-524d-4074-87d4-f56dafda4506",
+      "name": "CNBC"
+    },
+    {
+      "parameters": {
+        "url": "https://feeds.finance.yahoo.com/rss/2.0/headline?s=^GSPC&region=US&lang=en-US",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.rssFeedRead",
+      "typeVersion": 1.2,
+      "position": [
+        -272,
+        336
+      ],
+      "id": "1826af9b-635a-447f-be1c-b0f7cbc6c8ac",
+      "name": "Yahoo"
+    },
+    {
+      "parameters": {
+        "numberInputs": 4
+      },
+      "type": "n8n-nodes-base.merge",
+      "typeVersion": 3.2,
+      "position": [
+        -48,
+        16
+      ],
+      "id": "befcb0c4-28b7-4ac8-9329-9c38203e10a5",
+      "name": "Merge"
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 2
+          },
+          "conditions": [
+            {
+              "id": "d3f623dd-e202-4e6b-a73d-8487c015d340",
+              "leftValue": "={{ $json.pubDate }}",
+              "rightValue": "={{$today.minus({days: 1})}}",
+              "operator": {
+                "type": "dateTime",
+                "operation": "afterOrEquals"
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.filter",
+      "typeVersion": 2.2,
+      "position": [
+        176,
+        48
+      ],
+      "id": "43c4722e-590f-461f-b3ab-1e3a0af1a78f",
+      "name": "Filter News from Yesterday & Today"
+    },
+    {
+      "parameters": {
+        "aggregate": "aggregateAllItemData",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.aggregate",
+      "typeVersion": 1,
+      "position": [
+        400,
+        48
+      ],
+      "id": "30b00aa0-5a9a-48c0-98ae-09c1721107c3",
+      "name": "Aggregate News"
+    },
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "24657519-4ff6-4693-8683-5ffd49acc57b",
+              "name": "data",
+              "value": "={{ $json.data }}",
+              "type": "string"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [
+        624,
+        48
+      ],
+      "id": "d78c55c1-22df-4cd3-b65d-14634c09d77c",
+      "name": "Convert all data to String"
+    },
+    {
+      "parameters": {
+        "promptType": "define",
+        "text": "=You are a summarization assistant.  \nProcess the stock market news articles below and return a JSON object with exactly two keys:  \n\n{\n  \"email_subject\": \"A short subject line for today's stock market news update\",\n  \"content\": \"The full summary with date, US Top 10 section, and India Top 10 section\"\n}\n\n** Instructions **\n1. From {{ $json.data }}, choose the 10 most relevant articles related to the US stock market (indexes, earnings, economic news, financial trends).  \n2. From the same set, choose the 10 most relevant articles related to the Indian stock market (NSE/BSE, companies, RBI/economic updates).  \n3. Write concise, professional summaries (1-2 sentences) for each article.  \n4. After each summary, include the article URL.  \n5. Start the content with today's date: {{ $now.format('yyyy/MM/dd') }}.  \n6. Format \"content\" as:  \n   - Section 1: \"🇺🇸 US Stock Market Top 10\"  \n   - Section 2: \"🇮🇳 Indian Stock Market Top 10\"  \n   - Bullet point list under each section.  \n7. Ensure the response is **valid JSON** and nothing else.\n",
+        "options": {
+          "systemMessage": "\"** Output Format **\nOnly return the summary in plain text no explanations or additional formatting. Keep the response up to 2000 characters\""
+        }
+      },
+      "type": "@n8n/n8n-nodes-langchain.agent",
+      "typeVersion": 2.2,
+      "position": [
+        848,
+        48
+      ],
+      "id": "70bfc502-848b-440d-8e5c-3c6817e076b3",
+      "name": "AI News Summarizer"
+    },
+    {
+      "parameters": {
+        "options": {}
+      },
+      "type": "@n8n/n8n-nodes-langchain.lmChatGoogleGemini",
+      "typeVersion": 1,
+      "position": [
+        920,
+        272
+      ],
+      "id": "6bbce499-9b26-475c-97e7-2f3a32ee78da",
+      "name": "Google Gemini Chat Model",
+      "credentials": {
+        "googlePalmApi": {
+          "id": "voKan8YQAGWTWe5d",
+          "name": "Google Gemini(PaLM) Api account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "sendTo": "sanglap.patra@outlook.com",
+        "subject": "={{ $json.email_subject }} - {{$now.toFormat('MMMM d')}}th, {{$now.toFormat('yyyy')}}",
+        "message": "={{ $json.email_html }}",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.gmail",
+      "typeVersion": 2.1,
+      "position": [
+        1424,
+        48
+      ],
+      "id": "41db4887-de50-4e19-a80b-c583acffdbe0",
+      "name": "Send Stock Market News - Email",
+      "webhookId": "bef9e2ca-b815-45e2-a7f4-f51009786bb0",
+      "credentials": {
+        "gmailOAuth2": {
+          "id": "n5k8mPnXIL0aUatm",
+          "name": "Gmail account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "jsCode": "const msg = $input.first().json.output;\n\n// Try to extract JSON if wrapped in ```json ... ```\nconst regex = /```json([\\s\\S]*?)```/;\nconst match = msg.match(regex);\n\nlet parsed;\nif (match) {\n  parsed = JSON.parse(match[1]);\n} else {\n  try {\n    parsed = JSON.parse(msg); // in case it's already raw JSON\n  } catch (e) {\n    parsed = { email_subject: \"Daily Stock Market News\", content: msg };\n  }\n}\n\nconst subject = parsed.email_subject || \"Daily Stock Market News\";\nconst content = parsed.content || \"\";\n\n// Split into sections (US / India)\nconst sections = content.split(\"🇮🇳 Indian Stock Market Top 10\");\n\nlet usSection = sections[0].replace(/.*🇺🇸 US Stock Market Top 10/, \"\").trim();\nlet inSection = (sections[1] || \"\").trim();\n\n// Function to convert bullet points into table rows\nfunction bulletsToRows(text) {\n  return text\n    .split(\"\\n\")\n    .filter(line => line.startsWith(\"*\") || line.startsWith(\"-\"))\n    .map(line => {\n      const match = line.match(/^(?:\\*|-)\\s+(.*?)(https?:\\/\\/\\S+)/);\n      if (match) {\n        const summary = match[1].trim();\n        const url = match[2].trim();\n        return `<tr>\n                  <td style=\"padding:8px;border:1px solid #ddd;\">${summary}</td>\n                  <td style=\"padding:8px;border:1px solid #ddd;\">\n                    <a href=\"${url}\" target=\"_blank\">Read more</a>\n                  </td>\n                </tr>`;\n      }\n      return \"\";\n    })\n    .join(\"\\n\");\n}\n\n// Build US table\nconst usTable = `\n<h2>🇺🇸 US Stock Market Top 10</h2>\n<table style=\"border-collapse:collapse;width:100%;font-family:sans-serif;\">\n  <tr>\n    <th style=\"padding:8px;border:1px solid #ddd;background:#f2f2f2;\">Summary</th>\n    <th style=\"padding:8px;border:1px solid #ddd;background:#f2f2f2;\">Link</th>\n  </tr>\n  ${bulletsToRows(usSection)}\n</table>\n`;\n\n// Build India table\nconst inTable = `\n<h2>🇮🇳 Indian Stock Market Top 10</h2>\n<table style=\"border-collapse:collapse;width:100%;font-family:sans-serif;\">\n  <tr>\n    <th style=\"padding:8px;border:1px solid #ddd;background:#f2f2f2;\">Summary</th>\n    <th style=\"padding:8px;border:1px solid #ddd;background:#f2f2f2;\">Link</th>\n  </tr>\n  ${bulletsToRows(inSection)}\n</table>\n`;\n\n// Add today's date at top\nconst today = new Date().toISOString().split(\"T\")[0];\nconst header = `<h1>📅 ${today} - Stock Market News</h1><br/>`;\n\nreturn {\n  json: {\n    email_subject: subject,\n    email_html: `${header}${usTable}<br/><br/>${inTable}`\n  }\n};\n"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        1200,
+        48
+      ],
+      "id": "f183fa25-abb4-4bdc-acbb-1da8f9deb04b",
+      "name": "Sanitize JSON Data"
+    }
+  ],
+  "pinData": {},
+  "connections": {
+    "Schedule Trigger": {
+      "main": [
+        [
+          {
+            "node": "India Times",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "Live Mint",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "CNBC",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "Yahoo",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "India Times": {
+      "main": [
+        [
+          {
+            "node": "Merge",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Live Mint": {
+      "main": [
+        [
+          {
+            "node": "Merge",
+            "type": "main",
+            "index": 1
+          }
+        ]
+      ]
+    },
+    "Yahoo": {
+      "main": [
+        [
+          {
+            "node": "Merge",
+            "type": "main",
+            "index": 3
+          }
+        ]
+      ]
+    },
+    "CNBC": {
+      "main": [
+        [
+          {
+            "node": "Merge",
+            "type": "main",
+            "index": 2
+          }
+        ]
+      ]
+    },
+    "Merge": {
+      "main": [
+        [
+          {
+            "node": "Filter News from Yesterday & Today",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Filter News from Yesterday & Today": {
+      "main": [
+        [
+          {
+            "node": "Aggregate News",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Aggregate News": {
+      "main": [
+        [
+          {
+            "node": "Convert all data to String",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Convert all data to String": {
+      "main": [
+        [
+          {
+            "node": "AI News Summarizer",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Google Gemini Chat Model": {
+      "ai_languageModel": [
+        [
+          {
+            "node": "AI News Summarizer",
+            "type": "ai_languageModel",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "AI News Summarizer": {
+      "main": [
+        [
+          {
+            "node": "Sanitize JSON Data",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Sanitize JSON Data": {
+      "main": [
+        [
+          {
+            "node": "Send Stock Market News - Email",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": false,
+  "settings": {
+    "executionOrder": "v1"
+  },
+  "versionId": "eaca6e26-041c-4c1a-b9ed-db130f307934",
+  "meta": {
+    "templateCredsSetupCompleted": true,
+    "instanceId": "e00565081d89327fe9ca0384471cef79dd76bbeb281e5301e0675164a9bce7c9"
+  },
+  "id": "suECcBguJy1gzopv",
+  "tags": []
+}

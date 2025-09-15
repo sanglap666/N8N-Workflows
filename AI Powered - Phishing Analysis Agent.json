@@ -1,0 +1,918 @@
+{
+  "name": "AI Powered - Phishing Analysis Agent",
+  "nodes": [
+    {
+      "parameters": {},
+      "type": "n8n-nodes-base.manualTrigger",
+      "typeVersion": 1,
+      "position": [
+        -624,
+        -112
+      ],
+      "id": "87a8490c-b256-42b6-bb30-87dff4937b7b",
+      "name": "When clicking ‘Execute workflow’"
+    },
+    {
+      "parameters": {
+        "operation": "download",
+        "fileId": {
+          "__rl": true,
+          "value": "https://drive.google.com/file/d/1nNH9IT9nUyD1MFX57eYSRzJptfRMzGpt/view?usp=drive_link",
+          "mode": "url"
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.googleDrive",
+      "typeVersion": 3,
+      "position": [
+        -400,
+        -112
+      ],
+      "id": "e8d3d781-60e3-4dec-a315-d5db3d0abb42",
+      "name": "Download - Emails",
+      "credentials": {
+        "googleDriveOAuth2Api": {
+          "id": "W1At3Je4p9ZCaIjo",
+          "name": "Google Drive account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "https://api.any.run/v1/analysis/",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Authorization",
+              "value": "API-Key cRActrFN9TFmvW9EZSp6zWFkhj8ps3pSj96D8t9W"
+            }
+          ]
+        },
+        "sendBody": true,
+        "contentType": "multipart-form-data",
+        "bodyParameters": {
+          "parameters": [
+            {
+              "name": "obj_type",
+              "value": "file"
+            },
+            {
+              "parameterType": "formBinaryData",
+              "name": "file",
+              "inputDataFieldName": "data"
+            },
+            {
+              "name": "env_os",
+              "value": "windows"
+            },
+            {
+              "name": "env_version",
+              "value": "10"
+            },
+            {
+              "name": "env_bitness",
+              "value": "64"
+            },
+            {
+              "name": "env_type",
+              "value": "complete"
+            },
+            {
+              "name": "opt_timeout",
+              "value": "120"
+            },
+            {
+              "name": "opt_automated_interactivity",
+              "value": "true"
+            },
+            {
+              "name": "opt_privacy_type",
+              "value": "bylink"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        944,
+        192
+      ],
+      "id": "c52b58c2-057e-452c-8be0-3bf946858142",
+      "name": "Send Email to Any Run for Analysis"
+    },
+    {
+      "parameters": {
+        "url": "=https://api.any.run/v1/analysis/{{ $json.data.taskid }}",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Authorization",
+              "value": "API-Key cRActrFN9TFmvW9EZSp6zWFkhj8ps3pSj96D8t9W"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        1168,
+        192
+      ],
+      "id": "fedbb639-1a8e-49d0-addd-bdbaf4bd2e75",
+      "name": "Get Results of Any Run Analysis"
+    },
+    {
+      "parameters": {
+        "jsCode": "const msg = $input.first().json.content.parts[0].text;\nconst regex = /```json([\\s\\S]*?)```/;\nconst match = msg.match(regex);\n\nif (match) {\n  return JSON.parse(match[1]);\n} else {\n  return { \"chat_output\": msg };\n}\n"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        944,
+        -224
+      ],
+      "id": "39a9fc6a-11fc-4e2b-a557-3481caaf355e",
+      "name": "Sanitize & extract Splunk Query"
+    },
+    {
+      "parameters": {
+        "search": "=search {{ $json.queries[0].spl_query }}",
+        "additionalFields": {}
+      },
+      "type": "n8n-nodes-base.splunk",
+      "typeVersion": 2,
+      "position": [
+        1168,
+        -320
+      ],
+      "id": "76c26489-b9e8-4ce0-80eb-edec9a0b424f",
+      "name": "Look for abnormal logins",
+      "credentials": {
+        "splunkApi": {
+          "id": "cRzFMwOEUjQgPbFQ",
+          "name": "Splunk account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "search": "=search {{ $json.queries[1].spl_query }}",
+        "additionalFields": {}
+      },
+      "type": "n8n-nodes-base.splunk",
+      "typeVersion": 2,
+      "position": [
+        1168,
+        -128
+      ],
+      "id": "2689e094-b20b-49fd-9db0-f60d63d8e508",
+      "name": "Look for URL interactions",
+      "credentials": {
+        "splunkApi": {
+          "id": "cRzFMwOEUjQgPbFQ",
+          "name": "Splunk account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "https://api.zamzar.com/v1/jobs",
+        "authentication": "genericCredentialType",
+        "genericAuthType": "httpBasicAuth",
+        "sendBody": true,
+        "contentType": "multipart-form-data",
+        "bodyParameters": {
+          "parameters": [
+            {
+              "name": "target_format",
+              "value": "pdf"
+            },
+            {
+              "parameterType": "formBinaryData",
+              "name": "source_file",
+              "inputDataFieldName": "data"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        -176,
+        -208
+      ],
+      "id": "f15bbac5-8d13-4758-993b-1d678db5bdd9",
+      "name": "Zamzr File Conversion",
+      "credentials": {
+        "httpBasicAuth": {
+          "id": "FDwakCC9hFHRPqln",
+          "name": "Zamzar"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "url": "=https://api.zamzar.com/v1/jobs/{{ $json.id }}",
+        "authentication": "genericCredentialType",
+        "genericAuthType": "httpBasicAuth",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        48,
+        -208
+      ],
+      "id": "0a7d45ee-18d4-4202-88bf-0aed6c636e9c",
+      "name": "Zamzr File Conversion - Results",
+      "credentials": {
+        "httpBasicAuth": {
+          "id": "FDwakCC9hFHRPqln",
+          "name": "Zamzar"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "amount": 30
+      },
+      "type": "n8n-nodes-base.wait",
+      "typeVersion": 1.1,
+      "position": [
+        496,
+        -16
+      ],
+      "id": "0893da3f-600a-4b30-82f0-d3fd809dd1b9",
+      "name": "Wait - Zamzr to Complete",
+      "webhookId": "3101b1a3-815e-4aef-bc07-63ad8701f035"
+    },
+    {
+      "parameters": {
+        "url": "=https://sandbox.zamzar.com/v1/files/{{ $json.target_files[0].id }}/content",
+        "authentication": "genericCredentialType",
+        "genericAuthType": "httpBasicAuth",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        496,
+        -320
+      ],
+      "id": "4e2f0602-4fd8-4510-889b-1b24836dc3e6",
+      "name": "Zamzr - Get PDF File",
+      "credentials": {
+        "httpBasicAuth": {
+          "id": "FDwakCC9hFHRPqln",
+          "name": "Zamzar"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "amount": 30
+      },
+      "type": "n8n-nodes-base.wait",
+      "typeVersion": 1.1,
+      "position": [
+        1616,
+        288
+      ],
+      "id": "b6b076d2-1eb8-4992-99dd-3d8795953e44",
+      "name": "Wait - AnyRun to Complete",
+      "webhookId": "087bede2-44d7-4d95-bb10-d124753510c4"
+    },
+    {
+      "parameters": {
+        "operation": "getResult",
+        "searchJobId": {
+          "__rl": true,
+          "value": "={{ $json.id }}",
+          "mode": "id"
+        },
+        "filters": {},
+        "options": {}
+      },
+      "type": "n8n-nodes-base.splunk",
+      "typeVersion": 2,
+      "position": [
+        1392,
+        -320
+      ],
+      "id": "222c38cd-28b5-42a0-bcb2-ba7c96a87d4b",
+      "name": "Get the result of Abnormal Logins",
+      "credentials": {
+        "splunkApi": {
+          "id": "cRzFMwOEUjQgPbFQ",
+          "name": "Splunk account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "operation": "getResult",
+        "searchJobId": {
+          "__rl": true,
+          "value": "={{ $json.id }}",
+          "mode": "id"
+        },
+        "filters": {},
+        "options": {}
+      },
+      "type": "n8n-nodes-base.splunk",
+      "typeVersion": 2,
+      "position": [
+        1392,
+        -128
+      ],
+      "id": "dbe970ea-1bca-4ba0-bb62-080fe1d5e5ae",
+      "name": "Get the result of URL Interactions",
+      "credentials": {
+        "splunkApi": {
+          "id": "cRzFMwOEUjQgPbFQ",
+          "name": "Splunk account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 2
+          },
+          "conditions": [
+            {
+              "id": "f57c45c7-d910-44fe-90d4-ee29cd6b8a91",
+              "leftValue": "={{ $json.data.status }}",
+              "rightValue": "done",
+              "operator": {
+                "type": "string",
+                "operation": "equals"
+              }
+            },
+            {
+              "id": "98dede62-d2cc-4a3e-a02a-68e65bfdb28f",
+              "leftValue": "={{$json.data.tasks}}",
+              "rightValue": "",
+              "operator": {
+                "type": "array",
+                "operation": "exists",
+                "singleValue": true
+              }
+            }
+          ],
+          "combinator": "or"
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.2,
+      "position": [
+        1392,
+        112
+      ],
+      "id": "cb9fe875-2a90-4b36-9ee3-5c5daa35bbf0",
+      "name": "AnyRun - Results Check"
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 2
+          },
+          "conditions": [
+            {
+              "id": "002707c0-bb4d-4e7b-b506-75f953a1d1bb",
+              "leftValue": "={{ $json.status }}",
+              "rightValue": "successful",
+              "operator": {
+                "type": "string",
+                "operation": "equals",
+                "name": "filter.operator.equals"
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.2,
+      "position": [
+        272,
+        -272
+      ],
+      "id": "21543d29-cdff-4af5-b394-3c562465eaa4",
+      "name": "Zamzr Results Check"
+    },
+    {
+      "parameters": {
+        "resource": "document",
+        "modelId": {
+          "__rl": true,
+          "value": "models/gemini-1.5-pro-latest",
+          "mode": "list",
+          "cachedResultName": "models/gemini-1.5-pro-latest"
+        },
+        "text": "You are an automated extraction & query-generation engine for phishing investigations.\nYour input is the raw email (headers + body). Your job: extract the primary recipient email address and every URL found in the message (include http and https). Then build exactly two Splunk SPL queries (no extra queries):\n\nSign-in query — search Azure sign-in logs for the recipient.\n\nUse: index=azure_logs sourcetype=signinlogs\n\nMust search for the recipient as raw quoted text (example: \"sanglapcreatives@gmail.com\").\n\nUse the default time window: earliest=-24h latest=now unless the user explicitly provided a different window in the input.\n\nProxy query — search web proxy logs for clicks to any URLs found in the email.\n\nUse: index=proxy_logs sourcetype=web_proxy\n\nIf one or more URLs were extracted, query must match all URLs with an OR group of raw quoted strings, e.g.: (\"https://a.example\" OR \"http://b.example\").\n\nIf no URLs were found, the proxy query should search for the recipient as raw quoted text instead.\n\nUse the default time window: earliest=-24h latest=now.\n\nStrict output rules (must follow exactly):\n\nReturn ONLY a single JSON object (no surrounding text, no markdown, no code fences).\n\nJSON schema (required keys and types):\n\n{\n  \"recipient\": \"<recipient email string or null>\",\n  \"urls\": [\"<url1>\", \"<url2>\", \"...\"],          // empty array if none\n  \"queries\": [\n    {\n      \"name\": \"signin_query\",\n      \"spl_query\": \"<SPL string>\"\n    },\n    {\n      \"name\": \"proxy_query\",\n      \"spl_query\": \"<SPL string>\"\n    }\n  ],\n  \"action\": \"execute_splunk_query\"\n}\n\n\nFormatting rules & constraints:\n\nAll string values must be plain JSON strings.\n\nDo NOT include any extra fields.\n\nDo NOT include explanatory text, comments, or markdown — only the JSON object.\n\nUse double quotes (\") for Splunk literals as shown. Example for recipient: \"sanglapcreatives@gmail.com\".\n\nWhen inserting usernames, IPs, or URLs inside SPL, do not map them to field names (do not use user= or ip=). Always include them as quoted text for open search (example: use \"sanglapcreatives@gmail.com\", not user=\"sanglapcreatives@gmail.com\").\n\nIf multiple URLs, combine them in the proxy query using OR inside parentheses, preserving each URL as a quoted literal.\n\nEscape any double quotes inside extracted data if necessary so the JSON remains valid.\n\nEnsure SPL queries are syntactically valid single-line strings (no embedded newlines).\n\nExamples (for clarity — your output must match the JSON schema exactly):\n\nIf recipient = sanglapcreatives@gmail.com and one URL https://secure-login.example.com/verify:\n\n{\n  \"recipient\": \"sanglapcreatives@gmail.com\",\n  \"urls\": [\"https://secure-login.example.com/verify\"],\n  \"queries\": [\n    {\n      \"name\": \"signin_query\",\n      \"spl_query\": \"index=azure_logs sourcetype=signinlogs \\\"sanglapcreatives@gmail.com\\\" earliest=-24h latest=now\"\n    },\n    {\n      \"name\": \"proxy_query\",\n      \"spl_query\": \"index=proxy_logs sourcetype=web_proxy (\\\"https://secure-login.example.com/verify\\\") earliest=-24h latest=now\"\n    }\n  ],\n  \"action\": \"execute_splunk_query\"\n}\n\n\nIf recipient found but no URL extracted, proxy query should fall back to recipient search:\n\n{\n  \"recipient\": \"sanglapcreatives@gmail.com\",\n  \"urls\": [],\n  \"queries\": [\n    {\n      \"name\": \"signin_query\",\n      \"spl_query\": \"index=azure_logs sourcetype=signinlogs \\\"sanglapcreatives@gmail.com\\\" earliest=-24h latest=now\"\n    },\n    {\n      \"name\": \"proxy_query\",\n      \"spl_query\": \"index=proxy_logs sourcetype=web_proxy \\\"sanglapcreatives@gmail.com\\\" earliest=-24h latest=now\"\n    }\n  ],\n  \"action\": \"execute_splunk_query\"\n}\n\n\nIf no recipient can be identified, set \"recipient\": null and still produce proxy query based on URLs (or both null/empty if nothing extracted). Example:\n\n{\n  \"recipient\": null,\n  \"urls\": [\"http://invoice-view.example.com/view?inv=INV-8721\"],\n  \"queries\": [\n    {\n      \"name\": \"signin_query\",\n      \"spl_query\": \"index=azure_logs sourcetype=signinlogs earliest=-24h latest=now\"\n    },\n    {\n      \"name\": \"proxy_query\",\n      \"spl_query\": \"index=proxy_logs sourcetype=web_proxy (\\\"http://invoice-view.example.com/view?inv=INV-8721\\\") earliest=-24h latest=now\"\n    }\n  ],\n  \"action\": \"execute_splunk_query\"\n}\n\n\nBehavioral notes:\n\nBe conservative: if multiple recipients exist, prefer the To: recipient that is an exact email address; return one primary recipient only.\n\nExtract every http/https URL visible in headers or body (including query parameters). Normalize example[.]com style to example.com if the email contains obfuscated dots.\n\nDo NOT perform any web requests. Only extract text and build queries.",
+        "inputType": "binary",
+        "options": {}
+      },
+      "type": "@n8n/n8n-nodes-langchain.googleGemini",
+      "typeVersion": 1,
+      "position": [
+        720,
+        -224
+      ],
+      "id": "5f843717-cadf-49d5-97b9-67c4811351e5",
+      "name": "Analyze Email & Generate Queries",
+      "credentials": {
+        "googlePalmApi": {
+          "id": "voKan8YQAGWTWe5d",
+          "name": "Google Gemini(PaLM) Api account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "jsCode": "// n8n Function Node\n// Extract all _raw values from Splunk results into one text block\n\nlet logs = [];\n\n// Loop through each incoming item\nfor (const item of items) {\n  // Check if results array exists\n  if (item.json.results && Array.isArray(item.json.results)) {\n    for (const res of item.json.results) {\n      if (res._raw) {\n        logs.push(res._raw);\n      }\n    }\n  }\n}\n\n// Return as single text block (newline-separated)\nreturn [\n  {\n    json: {\n      raw: logs.join(\"\\n\")\n    }\n  }\n];\n"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        1616,
+        -128
+      ],
+      "id": "3194894a-71df-4935-b8c8-e24eba93fa95",
+      "name": "Sanitize the Proxy Log Results"
+    },
+    {
+      "parameters": {
+        "jsCode": "// n8n Function Node\n// Extract all _raw values from Splunk results into one text block\n\nlet logs = [];\n\n// Loop through each incoming item\nfor (const item of items) {\n  // Check if results array exists\n  if (item.json.results && Array.isArray(item.json.results)) {\n    for (const res of item.json.results) {\n      if (res._raw) {\n        logs.push(res._raw);\n      }\n    }\n  }\n}\n\n// Return as single text block (newline-separated)\nreturn [\n  {\n    json: {\n      raw: logs.join(\"\\n\")\n    }\n  }\n];\n"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        1616,
+        -320
+      ],
+      "id": "da2b613e-5cbd-4dcf-947d-fed9955d8eeb",
+      "name": "Sanitize the Abnormal Logins Logs"
+    },
+    {
+      "parameters": {
+        "operation": "pdf",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.extractFromFile",
+      "typeVersion": 1,
+      "position": [
+        1616,
+        -512
+      ],
+      "id": "c96c34f6-2493-4f58-a248-f22566c8dd49",
+      "name": "Convert PDF to JSON"
+    },
+    {
+      "parameters": {
+        "numberInputs": 4
+      },
+      "type": "n8n-nodes-base.merge",
+      "typeVersion": 3.2,
+      "position": [
+        1840,
+        -256
+      ],
+      "id": "f0773eee-1f37-49b7-8bf4-e434dbf2dc17",
+      "name": "Merge"
+    },
+    {
+      "parameters": {
+        "aggregate": "aggregateAllItemData",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.aggregate",
+      "typeVersion": 1,
+      "position": [
+        2064,
+        -224
+      ],
+      "id": "5f416e79-acaa-4246-833c-af45f36b5063",
+      "name": "Aggregate"
+    },
+    {
+      "parameters": {
+        "modelId": {
+          "__rl": true,
+          "value": "models/gemini-1.5-pro-latest",
+          "mode": "list",
+          "cachedResultName": "models/gemini-1.5-pro-latest"
+        },
+        "messages": {
+          "values": [
+            {
+              "content": "=📌 Phishing Investigation Prompt\n\nYou are AI SOC Phishing Investigator, an AI agent specialized in phishing investigations and threat analysis.\nYour job: take multiple investigation data sources (email, sandbox analysis, abnormal logins, proxy logs) and generate a structured investigation report with recommended actions.\n\nInput You Will Receive\n\nYou will receive JSON input with the following fields:\n\n{\n  \"email_extract\": \"{{ $('Convert PDF to JSON').item.json.text }}\",\n  \"anyrun_analysis\": \"{{ $('Sanitize AnyRun Results').item.json.rawData }}\",\n  \"signin_logs\": \"{{ $('Sanitize the Abnormal Logins Logs').item.json.raw }}\",\n  \"proxy_logs\": \"{{ $('Sanitize the Proxy Log Results').item.json.raw }}\"\n}\n\nYour Responsibilities\n\nSummarize the phishing email\n\nExtract recipient(s), sender, subject, phishing lure, and malicious URLs/domains.\n\nCorrelate with AnyRun analysis\n\nReport malware behavior, dropped files, C2 communication, or suspicious indicators.\n\nCorrelate abnormal logins\n\nHighlight if recipient account experienced unusual logins from new geographies, IPs, or failed attempts.\n\nCorrelate proxy logs\n\nShow whether the phishing URL(s) were clicked and what requests (e.g., POST, credential submission) were observed.\n\nVerdict & Classification\n\nDecide if this is a True Positive phishing attack, a False Positive, or Needs further validation.\n\nRecommended SOC Actions\n\nProvide 4–6 actionable SOC next steps (containment, eradication, user notification, IR follow-up).\n\nOutput Format (Strict)\n\nAlways return investigation results in the following JSON format:\n\n{\n  \"report\": {\n    \"summary\": \"<Concise summary of the phishing campaign>\",\n    \"email_analysis\": \"<Key findings from email>\",\n    \"anyrun_correlation\": \"<Key malicious behaviors / IoCs>\",\n    \"signin_analysis\": \"<Abnormal login observations>\",\n    \"proxy_analysis\": \"<Click / traffic analysis>\",\n    \"verdict\": \"<True Positive / False Positive / Needs Validation>\",\n    \"soc_recommendations\": [\n      \"Step 1...\",\n      \"Step 2...\",\n      \"Step 3...\",\n      \"Step 4...\"\n    ]\n  },\n  \"action\": \"generate_investigation_report\"\n}\n\n\n⚠️ Rules:\n\nBe concise but detailed enough for SOC analysts.\n\nAvoid repetition; no marketing fluff.\n\nReport should be under 2000 characters in total."
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "@n8n/n8n-nodes-langchain.googleGemini",
+      "typeVersion": 1,
+      "position": [
+        2288,
+        -224
+      ],
+      "id": "6bdbb11a-1fcc-4c7a-8407-db009e49fa2f",
+      "name": "Phishing Investigator",
+      "credentials": {
+        "googlePalmApi": {
+          "id": "voKan8YQAGWTWe5d",
+          "name": "Google Gemini(PaLM) Api account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "jsCode": "// Step 1: Extract raw model output\nconst msg = $input.first().json.content.parts[0].text;\n\n// Step 2: Match JSON inside ```json ... ```\nconst regex = /```json([\\s\\S]*?)```/;\nconst match = msg.match(regex);\n\nlet parsed;\n\nif (match) {\n  try {\n    parsed = JSON.parse(match[1]);\n  } catch (err) {\n    parsed = { \"chat_output\": msg, \"error\": \"Failed to parse JSON\", \"details\": err.message };\n  }\n} else {\n  parsed = { \"chat_output\": msg };\n}\n\n// Step 3: Build email subject if report data exists\nlet subject = \"Phishing Investigation Report\";\n\nif (parsed?.report?.verdict && parsed?.report?.email_analysis) {\n  // Extract subject line from email_analysis (after \"Subject:\")\n  let emailSubject = \"\";\n  const subjectMatch = parsed.report.email_analysis.match(/Subject:\\s*([^\\n]+)/i);\n  if (subjectMatch) {\n    emailSubject = subjectMatch[1].trim();\n  }\n\n  subject = `Phishing Investigation Report - ${parsed.report.verdict} - ${emailSubject}`;\n}\n\n// Step 4: Convert parsed.report into HTML table for email body\nlet htmlBody = \"<p>No report data available.</p>\";\n\nif (parsed?.report) {\n  htmlBody = \"<table border='1' cellpadding='5' cellspacing='0' style='border-collapse: collapse;'>\";\n  htmlBody += \"<tr><th>Field</th><th>Value</th></tr>\";\n\n  for (const [key, value] of Object.entries(parsed.report)) {\n    let displayValue = value;\n\n    // If value is an object or array, stringify it for HTML table\n    if (typeof value === 'object') {\n      displayValue = JSON.stringify(value, null, 2)\n        .replace(/\\n/g, '<br>')      // preserve line breaks\n        .replace(/ /g, '&nbsp;');    // preserve spaces\n    }\n\n    htmlBody += `<tr><td>${key}</td><td>${displayValue}</td></tr>`;\n  }\n\n  htmlBody += \"</table>\";\n}\n\n// Step 5: Return parsed JSON unchanged + email subject + HTML body\nreturn {\n  json: {\n    ...parsed,           // keep original body\n    subject: subject,    // updated email subject\n    email_body: htmlBody,\n    raw_output: msg\n  }\n};\n"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        2640,
+        -224
+      ],
+      "id": "236e78cd-e930-4b1b-be0d-5dca79c1ce30",
+      "name": "Generate Email"
+    },
+    {
+      "parameters": {
+        "jsCode": "// Input: Any.Run node output with structure { data: { tasks: [...] } }\n// Output: Flattened raw data string\n\nconst firstTask = $input.first().json.data.tasks?.[0] || $input.first().json.data.analysis;\n\nconst verdict = firstTask.verdict || 'N/A';\nconst tags = Array.isArray(firstTask.tags) ? firstTask.tags.join(', ') : 'N/A';\n\nconst rawData = `Verdict: ${verdict}\\nTags: ${tags}`;\n\nreturn [{ json: { rawData } }];\n"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        1616,
+        64
+      ],
+      "id": "86904462-05d6-4eee-920b-73604cf2493a",
+      "name": "Sanitize AnyRun Results"
+    },
+    {
+      "parameters": {
+        "sendTo": "sanglap.patra@outlook.com",
+        "subject": "={{ $json.subject }}",
+        "message": "={{ $json.email_body }}",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.gmail",
+      "typeVersion": 2.1,
+      "position": [
+        2864,
+        -224
+      ],
+      "id": "189eafc0-5fd6-45b6-9880-b8ac884b998b",
+      "name": "Send Investigation Email",
+      "webhookId": "f689fe0b-8e11-4b48-a385-fea334d7f6b9",
+      "alwaysOutputData": false,
+      "credentials": {
+        "gmailOAuth2": {
+          "id": "n5k8mPnXIL0aUatm",
+          "name": "Gmail account"
+        }
+      }
+    }
+  ],
+  "pinData": {},
+  "connections": {
+    "When clicking ‘Execute workflow’": {
+      "main": [
+        [
+          {
+            "node": "Download - Emails",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Download - Emails": {
+      "main": [
+        [
+          {
+            "node": "Send Email to Any Run for Analysis",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "Zamzr File Conversion",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Send Email to Any Run for Analysis": {
+      "main": [
+        [
+          {
+            "node": "Get Results of Any Run Analysis",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Get Results of Any Run Analysis": {
+      "main": [
+        [
+          {
+            "node": "AnyRun - Results Check",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Sanitize & extract Splunk Query": {
+      "main": [
+        [
+          {
+            "node": "Look for abnormal logins",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "Look for URL interactions",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Look for abnormal logins": {
+      "main": [
+        [
+          {
+            "node": "Get the result of Abnormal Logins",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Look for URL interactions": {
+      "main": [
+        [
+          {
+            "node": "Get the result of URL Interactions",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Zamzr File Conversion": {
+      "main": [
+        [
+          {
+            "node": "Zamzr File Conversion - Results",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Zamzr File Conversion - Results": {
+      "main": [
+        [
+          {
+            "node": "Zamzr Results Check",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Wait - Zamzr to Complete": {
+      "main": [
+        [
+          {
+            "node": "Zamzr File Conversion - Results",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Zamzr - Get PDF File": {
+      "main": [
+        [
+          {
+            "node": "Analyze Email & Generate Queries",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "Convert PDF to JSON",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Wait - AnyRun to Complete": {
+      "main": [
+        [
+          {
+            "node": "Get Results of Any Run Analysis",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "AnyRun - Results Check": {
+      "main": [
+        [
+          {
+            "node": "Sanitize AnyRun Results",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Wait - AnyRun to Complete",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Zamzr Results Check": {
+      "main": [
+        [
+          {
+            "node": "Zamzr - Get PDF File",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Wait - Zamzr to Complete",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Analyze Email & Generate Queries": {
+      "main": [
+        [
+          {
+            "node": "Sanitize & extract Splunk Query",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Get the result of Abnormal Logins": {
+      "main": [
+        [
+          {
+            "node": "Sanitize the Abnormal Logins Logs",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Get the result of URL Interactions": {
+      "main": [
+        [
+          {
+            "node": "Sanitize the Proxy Log Results",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Sanitize the Abnormal Logins Logs": {
+      "main": [
+        [
+          {
+            "node": "Merge",
+            "type": "main",
+            "index": 1
+          }
+        ]
+      ]
+    },
+    "Sanitize the Proxy Log Results": {
+      "main": [
+        [
+          {
+            "node": "Merge",
+            "type": "main",
+            "index": 2
+          }
+        ]
+      ]
+    },
+    "Convert PDF to JSON": {
+      "main": [
+        [
+          {
+            "node": "Merge",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Merge": {
+      "main": [
+        [
+          {
+            "node": "Aggregate",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Aggregate": {
+      "main": [
+        [
+          {
+            "node": "Phishing Investigator",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Phishing Investigator": {
+      "main": [
+        [
+          {
+            "node": "Generate Email",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Generate Email": {
+      "main": [
+        [
+          {
+            "node": "Send Investigation Email",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Sanitize AnyRun Results": {
+      "main": [
+        [
+          {
+            "node": "Merge",
+            "type": "main",
+            "index": 3
+          }
+        ]
+      ]
+    }
+  },
+  "active": false,
+  "settings": {
+    "executionOrder": "v1"
+  },
+  "versionId": "10781e49-a12c-4687-ba56-c1942d82137e",
+  "meta": {
+    "templateCredsSetupCompleted": true,
+    "instanceId": "e00565081d89327fe9ca0384471cef79dd76bbeb281e5301e0675164a9bce7c9"
+  },
+  "id": "IW1qOI2OTx71OsZx",
+  "tags": []
+}

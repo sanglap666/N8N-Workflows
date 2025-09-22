@@ -1,0 +1,471 @@
+{
+  "name": "AI Powered - Security Investigations",
+  "nodes": [
+    {
+      "parameters": {},
+      "type": "n8n-nodes-base.manualTrigger",
+      "typeVersion": 1,
+      "position": [
+        -368,
+        144
+      ],
+      "id": "05439101-e58b-46cb-8088-a408ff2e6845",
+      "name": "When clicking ‘Execute workflow’"
+    },
+    {
+      "parameters": {
+        "operation": "download",
+        "fileId": {
+          "__rl": true,
+          "value": "https://drive.google.com/file/d/1asWgNQZBtl52yk_dizYRmUaNrbZMrq3A/view?usp=drive_link",
+          "mode": "url"
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.googleDrive",
+      "typeVersion": 3,
+      "position": [
+        -144,
+        144
+      ],
+      "id": "ca91b1f0-061d-4422-a84e-bffa279d0c1d",
+      "name": "Get Alert from SIEM",
+      "credentials": {
+        "googleDriveOAuth2Api": {
+          "id": "KXsWr1S3O42bdveQ",
+          "name": "Google Drive account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "operation": "fromJson",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.extractFromFile",
+      "typeVersion": 1,
+      "position": [
+        80,
+        144
+      ],
+      "id": "1eb35af5-aaf5-4731-8c50-3ce8ff366b3d",
+      "name": "Extract from SIEM"
+    },
+    {
+      "parameters": {
+        "promptType": "define",
+        "text": "=New alert received:\n{{$json[\"raw_text\"]}}\n\nReturn ONLY a JSON object with keys:\nS_No, CaseID, Analysis, RiskScore, Actions, IOCs\n",
+        "options": {
+          "systemMessage": "You are an AI SOC Analyst. You receive one alert at a time.\nYou must analyze the alert, correlate with prior alerts in memory, and decide if it should create a new case or update an existing one.\n\nRules:\n- Output MUST be a valid JSON object with the exact keys: S_No, CaseID, Analysis, RiskScore, Actions, IOCs.\n\nS_No:\n- This is a serial number for each processed alert.\n- Start from 1 if this is the first alert.\n- For each subsequent alert, increase by 1 compared to the last seen S_No in memory.\n- Always return S_No as an integer.\n\nCaseID:\n- If classification is False Positive → CaseID = null.\n- If classification is Suspicious or Malicious:\n   * If it correlates with an existing case from memory → reuse that CaseID.\n   * If it correlates with prior alerts that were False Positive → generate a NEW CaseID.\n   * If unrelated → generate a NEW CaseID.\n- Case IDs must follow the format CASE-YYYYMMDD-###, where ### is a sequential case number for that date. Look into prior cases stored in memory to decide the next available number.\n\nAnalysis:\n- Write 2–3 sentences in plain English explaining the classification and correlation.\n\nRiskScore:\n- Integer from 0–10, based on severity, correlation, and your judgment.\n\nActions:\n- Allowed values only:\n  [\"create_ticket\",\"scan_endpoint\",\"quarantine_endpoint\",\"terminate_processes\",\"force_password_reset\",\"revoke_tokens_sessions\",\"block_ip\"]\n- If classification is False Positive → return [].\n- If a NEW case is created → always include \"create_ticket\" plus other relevant actions.\n- If reusing an EXISTING case:\n   * Do NOT repeat \"create_ticket\".\n   * Only include actions that are newly required for the case.\n   * If no new actions are required, return [].\n\nIOCs:\n- Always include the current alert_id.\n- Always include all IOCs present in the current alert (user, source_ip, destination_host, process, cmdline, file, hash, device, etc.).\n- If an IOC was already part of this case, it may still be repeated — memory is for correlation only, not for suppressing output.\n- Never return {}. If no new indicators are present, still include the alert_id and any fields from this alert.\n\nStrictness:\n- Do not output any keys beyond S_No, CaseID, Analysis, RiskScore, Actions, IOCs.\n- Do not include any explanation or text outside the JSON.\n"
+        }
+      },
+      "type": "@n8n/n8n-nodes-langchain.agent",
+      "typeVersion": 2.2,
+      "position": [
+        976,
+        -112
+      ],
+      "id": "0ad33c02-002e-41d7-ae00-c31f5cee7ed0",
+      "name": "AI Agent - SOC Analyst & Responder"
+    },
+    {
+      "parameters": {
+        "modelName": "models/gemini-1.5-flash",
+        "options": {}
+      },
+      "type": "@n8n/n8n-nodes-langchain.lmChatGoogleGemini",
+      "typeVersion": 1,
+      "position": [
+        992,
+        112
+      ],
+      "id": "737b3c29-4136-43cf-bd5e-ef14ec19d076",
+      "name": "Google Gemini Chat Model",
+      "credentials": {
+        "googlePalmApi": {
+          "id": "mNUdeoRohEtATHiT",
+          "name": "Google Gemini(PaLM) Api account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "fieldToSplitOut": "data",
+        "include": "allOtherFields",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.splitOut",
+      "typeVersion": 1,
+      "position": [
+        304,
+        144
+      ],
+      "id": "3da538b0-31d1-4102-8570-335a56adf2cc",
+      "name": "Split Out"
+    },
+    {
+      "parameters": {
+        "options": {}
+      },
+      "type": "n8n-nodes-base.splitInBatches",
+      "typeVersion": 3,
+      "position": [
+        528,
+        144
+      ],
+      "id": "49a65cf9-95a6-47a9-8c88-82c2703c9490",
+      "name": "Loop Over Items"
+    },
+    {
+      "parameters": {
+        "jsCode": "// n8n Function Item node\n// Takes one alert object and outputs a normalized raw_text string\n// Handles alerts with different keys dynamically\n\nconst alert = $input.first().json.data; // current alert\n\nfunction normalizeDynamic(obj) {\n  let parts = [];\n  for (const [key, value] of Object.entries(obj)) {\n    // Convert arrays/objects to JSON strings for readability\n    let val = value;\n    if (typeof value === \"object\") {\n      try {\n        val = JSON.stringify(value);\n      } catch (e) {\n        val = String(value);\n      }\n    }\n    parts.push(`${key}: ${val}`);\n  }\n  return parts.join(\"\\n\");\n}\n\nreturn {\n  json: {\n    raw_text: normalizeDynamic(alert),\n    ...alert // keep original fields as-is for further use\n  }\n};\n"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        752,
+        -112
+      ],
+      "id": "01e78026-4ef9-4b0f-9180-7e44870aa0bf",
+      "name": "Sanitize the Data"
+    },
+    {
+      "parameters": {
+        "operation": "append",
+        "documentId": {
+          "__rl": true,
+          "value": "10Gv7LPrT3eZH5-CFXvjFw4D-mBtukei4hBZ7jWUwyXU",
+          "mode": "list",
+          "cachedResultName": "Incident Investigation & Tracker",
+          "cachedResultUrl": "https://docs.google.com/spreadsheets/d/10Gv7LPrT3eZH5-CFXvjFw4D-mBtukei4hBZ7jWUwyXU/edit?usp=drivesdk"
+        },
+        "sheetName": {
+          "__rl": true,
+          "value": "gid=0",
+          "mode": "list",
+          "cachedResultName": "Sheet1",
+          "cachedResultUrl": "https://docs.google.com/spreadsheets/d/10Gv7LPrT3eZH5-CFXvjFw4D-mBtukei4hBZ7jWUwyXU/edit#gid=0"
+        },
+        "columns": {
+          "mappingMode": "defineBelow",
+          "value": {
+            "Case ID": "={{ $('AI Agent Output Sanitize').item.json.CaseID }}",
+            "Analysis": "={{ $('AI Agent Output Sanitize').item.json.Analysis }}",
+            "Risk Score": "={{ $('AI Agent Output Sanitize').item.json.RiskScore }}",
+            "Actions": "={{ $('AI Agent Output Sanitize').item.json.Actions }}",
+            "IOCs": "={{ $('AI Agent Output Sanitize').item.json.IOCs }}",
+            "Serial": "={{ $('AI Agent Output Sanitize').item.json.S_No }}"
+          },
+          "matchingColumns": [
+            "output"
+          ],
+          "schema": [
+            {
+              "id": "Serial",
+              "displayName": "Serial",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "Case ID",
+              "displayName": "Case ID",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "Risk Score",
+              "displayName": "Risk Score",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "Analysis",
+              "displayName": "Analysis",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "IOCs",
+              "displayName": "IOCs",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "Actions",
+              "displayName": "Actions",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "Status",
+              "displayName": "Status",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            }
+          ],
+          "attemptToConvertTypes": false,
+          "convertFieldsToString": false
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.googleSheets",
+      "typeVersion": 4.7,
+      "position": [
+        1776,
+        16
+      ],
+      "id": "1f61d398-adc3-45cf-96b0-f4285e54ada2",
+      "name": "Append to Case Tracker",
+      "credentials": {
+        "googleSheetsOAuth2Api": {
+          "id": "Y62tEALbYjZCSe2b",
+          "name": "Google Sheets account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 2
+          },
+          "conditions": [
+            {
+              "id": "ec3f78d9-6c14-472e-8872-94db265b1f93",
+              "leftValue": "={{ $('AI Agent Output Sanitize').item.json.CaseID }}",
+              "rightValue": "",
+              "operator": {
+                "type": "string",
+                "operation": "exists",
+                "singleValue": true
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.2,
+      "position": [
+        1552,
+        -112
+      ],
+      "id": "5c8cd85b-8472-4afc-88df-ec05ab9a1147",
+      "name": "If"
+    },
+    {
+      "parameters": {
+        "jsCode": "const msg = $input.first().json.output;\nconst regex = /```json([\\s\\S]*?)```/;\nconst match = msg.match(regex);\n\nif (match) {\n  return JSON.parse(match[1]);\n} else {\n  return { \"chat_output\": msg };\n}\n"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        1328,
+        -112
+      ],
+      "id": "ccaa1e34-d191-495c-8b04-5d75e626ef43",
+      "name": "AI Agent Output Sanitize"
+    },
+    {
+      "parameters": {
+        "sessionIdType": "customKey",
+        "sessionKey": "=incident-analysis-{{$executionId}}\n",
+        "contextWindowLength": "=100"
+      },
+      "type": "@n8n/n8n-nodes-langchain.memoryBufferWindow",
+      "typeVersion": 1.3,
+      "position": [
+        1120,
+        112
+      ],
+      "id": "bc5c13e5-70a8-4d5b-a1bb-629733029d87",
+      "name": "Simple Memory"
+    }
+  ],
+  "pinData": {},
+  "connections": {
+    "When clicking ‘Execute workflow’": {
+      "main": [
+        [
+          {
+            "node": "Get Alert from SIEM",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Get Alert from SIEM": {
+      "main": [
+        [
+          {
+            "node": "Extract from SIEM",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Extract from SIEM": {
+      "main": [
+        [
+          {
+            "node": "Split Out",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "AI Agent - SOC Analyst & Responder": {
+      "main": [
+        [
+          {
+            "node": "AI Agent Output Sanitize",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Google Gemini Chat Model": {
+      "ai_languageModel": [
+        [
+          {
+            "node": "AI Agent - SOC Analyst & Responder",
+            "type": "ai_languageModel",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Split Out": {
+      "main": [
+        [
+          {
+            "node": "Loop Over Items",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Loop Over Items": {
+      "main": [
+        [],
+        [
+          {
+            "node": "Sanitize the Data",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Sanitize the Data": {
+      "main": [
+        [
+          {
+            "node": "AI Agent - SOC Analyst & Responder",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "If": {
+      "main": [
+        [
+          {
+            "node": "Append to Case Tracker",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Loop Over Items",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Append to Case Tracker": {
+      "main": [
+        [
+          {
+            "node": "Loop Over Items",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "AI Agent Output Sanitize": {
+      "main": [
+        [
+          {
+            "node": "If",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Simple Memory": {
+      "ai_memory": [
+        [
+          {
+            "node": "AI Agent - SOC Analyst & Responder",
+            "type": "ai_memory",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": false,
+  "settings": {
+    "executionOrder": "v1"
+  },
+  "versionId": "8e3468ed-95f4-49a3-ae01-3335755f045c",
+  "meta": {
+    "templateCredsSetupCompleted": true,
+    "instanceId": "3a39685ca0507cfa047793ccc02d2ad16e6af00b96b5b66611d7736c6a50ce98"
+  },
+  "id": "x2ds1a9uUCH6qSWa",
+  "tags": []
+}

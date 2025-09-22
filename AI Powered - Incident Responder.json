@@ -1,0 +1,2043 @@
+{
+  "name": "AI Powered - Incident Responder",
+  "nodes": [
+    {
+      "parameters": {
+        "pollTimes": {
+          "item": [
+            {
+              "mode": "everyMinute"
+            }
+          ]
+        },
+        "documentId": {
+          "__rl": true,
+          "value": "10Gv7LPrT3eZH5-CFXvjFw4D-mBtukei4hBZ7jWUwyXU",
+          "mode": "list",
+          "cachedResultName": "Incident Investigation & Tracker",
+          "cachedResultUrl": "https://docs.google.com/spreadsheets/d/10Gv7LPrT3eZH5-CFXvjFw4D-mBtukei4hBZ7jWUwyXU/edit?usp=drivesdk"
+        },
+        "sheetName": {
+          "__rl": true,
+          "value": "gid=0",
+          "mode": "list",
+          "cachedResultName": "Sheet1",
+          "cachedResultUrl": "https://docs.google.com/spreadsheets/d/10Gv7LPrT3eZH5-CFXvjFw4D-mBtukei4hBZ7jWUwyXU/edit#gid=0"
+        },
+        "event": "rowAdded",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.googleSheetsTrigger",
+      "typeVersion": 1,
+      "position": [
+        -496,
+        240
+      ],
+      "id": "deb73ebb-69df-4aee-8d67-b411e38b7db2",
+      "name": "New Case Trigger",
+      "credentials": {
+        "googleSheetsTriggerOAuth2Api": {
+          "id": "gZ4OAQnty4yONmr8",
+          "name": "Google Sheets Trigger account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "options": {}
+      },
+      "type": "n8n-nodes-base.splitInBatches",
+      "typeVersion": 3,
+      "position": [
+        -272,
+        240
+      ],
+      "id": "00a3ad3e-02ca-4603-b083-65daacddea82",
+      "name": "Loop Over Cases"
+    },
+    {
+      "parameters": {
+        "operation": "appendOrUpdate",
+        "documentId": {
+          "__rl": true,
+          "value": "10Gv7LPrT3eZH5-CFXvjFw4D-mBtukei4hBZ7jWUwyXU",
+          "mode": "list",
+          "cachedResultName": "Incident Investigation & Tracker",
+          "cachedResultUrl": "https://docs.google.com/spreadsheets/d/10Gv7LPrT3eZH5-CFXvjFw4D-mBtukei4hBZ7jWUwyXU/edit?usp=drivesdk"
+        },
+        "sheetName": {
+          "__rl": true,
+          "value": "gid=0",
+          "mode": "list",
+          "cachedResultName": "Sheet1",
+          "cachedResultUrl": "https://docs.google.com/spreadsheets/d/10Gv7LPrT3eZH5-CFXvjFw4D-mBtukei4hBZ7jWUwyXU/edit#gid=0"
+        },
+        "columns": {
+          "mappingMode": "defineBelow",
+          "value": {
+            "Status": "In-Progress",
+            "Serial": "={{ $json.Serial }}"
+          },
+          "matchingColumns": [
+            "Serial"
+          ],
+          "schema": [
+            {
+              "id": "Serial",
+              "displayName": "Serial",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "Case ID",
+              "displayName": "Case ID",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": true
+            },
+            {
+              "id": "Risk Score",
+              "displayName": "Risk Score",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": true
+            },
+            {
+              "id": "Analysis",
+              "displayName": "Analysis",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": true
+            },
+            {
+              "id": "IOCs",
+              "displayName": "IOCs",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": true
+            },
+            {
+              "id": "Actions",
+              "displayName": "Actions",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": true
+            },
+            {
+              "id": "Status",
+              "displayName": "Status",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            }
+          ],
+          "attemptToConvertTypes": false,
+          "convertFieldsToString": false
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.googleSheets",
+      "typeVersion": 4.7,
+      "position": [
+        -48,
+        0
+      ],
+      "id": "3bd62d1a-e990-4fdd-bebe-fc5b7de239f5",
+      "name": "Update Status over Tracker to In Progress",
+      "credentials": {
+        "googleSheetsOAuth2Api": {
+          "id": "Y62tEALbYjZCSe2b",
+          "name": "Google Sheets account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "jsCode": "// Function node (normalize Actions into clean JSON structure)\n\nlet raw = $('Loop Over Cases').first().json.Actions;\n\n// If it's a string, try to parse it\nif (typeof raw === 'string') {\n  try {\n    raw = JSON.parse(raw);\n  } catch (err) {\n    raw = raw\n      .replace(/^\\[|\\]$/g, '')\n      .split(',')\n      .map(s => s.trim())\n      .filter(Boolean);\n  }\n}\n\n// Ensure array\nif (!Array.isArray(raw)) {\n  raw = raw ? [raw] : [];\n}\n\n// Normalize actions (remove duplicates, trim spaces)\nlet actions = [...new Set(raw.map(a => String(a).trim()))];\n\n// Remove 'create_ticket'\nactions = actions.filter(a => a !== 'create_ticket');\n\n// Clean: remove empty values\nactions = actions.filter(a => a.length > 0);\n\n// Return in normalized schema\nreturn {\n  json: {\n    Actions: actions\n  }\n};\n"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        1744,
+        -96
+      ],
+      "id": "cdb26794-2fdb-428e-b2e4-f941d4104a21",
+      "name": "Sanitize Actions"
+    },
+    {
+      "parameters": {
+        "operation": "appendOrUpdate",
+        "documentId": {
+          "__rl": true,
+          "value": "10Gv7LPrT3eZH5-CFXvjFw4D-mBtukei4hBZ7jWUwyXU",
+          "mode": "list",
+          "cachedResultName": "Incident Investigation & Tracker",
+          "cachedResultUrl": "https://docs.google.com/spreadsheets/d/10Gv7LPrT3eZH5-CFXvjFw4D-mBtukei4hBZ7jWUwyXU/edit?usp=drivesdk"
+        },
+        "sheetName": {
+          "__rl": true,
+          "value": "gid=0",
+          "mode": "list",
+          "cachedResultName": "Sheet1",
+          "cachedResultUrl": "https://docs.google.com/spreadsheets/d/10Gv7LPrT3eZH5-CFXvjFw4D-mBtukei4hBZ7jWUwyXU/edit#gid=0"
+        },
+        "columns": {
+          "mappingMode": "defineBelow",
+          "value": {
+            "Status": "Not Required",
+            "Serial": "={{ $('Loop Over Cases').item.json.Serial }}"
+          },
+          "matchingColumns": [
+            "Serial"
+          ],
+          "schema": [
+            {
+              "id": "Serial",
+              "displayName": "Serial",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "Case ID",
+              "displayName": "Case ID",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": true
+            },
+            {
+              "id": "Risk Score",
+              "displayName": "Risk Score",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": true
+            },
+            {
+              "id": "Analysis",
+              "displayName": "Analysis",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": true
+            },
+            {
+              "id": "IOCs",
+              "displayName": "IOCs",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": true
+            },
+            {
+              "id": "Actions",
+              "displayName": "Actions",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": true
+            },
+            {
+              "id": "Status",
+              "displayName": "Status",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            }
+          ],
+          "attemptToConvertTypes": false,
+          "convertFieldsToString": false
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.googleSheets",
+      "typeVersion": 4.7,
+      "position": [
+        1520,
+        96
+      ],
+      "id": "3ae4cb26-f359-4897-9950-35303a1155ab",
+      "name": "Update Status over Tracker For Task to Not required",
+      "credentials": {
+        "googleSheetsOAuth2Api": {
+          "id": "Y62tEALbYjZCSe2b",
+          "name": "Google Sheets account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "operation": "appendOrUpdate",
+        "documentId": {
+          "__rl": true,
+          "value": "10Gv7LPrT3eZH5-CFXvjFw4D-mBtukei4hBZ7jWUwyXU",
+          "mode": "list",
+          "cachedResultName": "Incident Investigation & Tracker",
+          "cachedResultUrl": "https://docs.google.com/spreadsheets/d/10Gv7LPrT3eZH5-CFXvjFw4D-mBtukei4hBZ7jWUwyXU/edit?usp=drivesdk"
+        },
+        "sheetName": {
+          "__rl": true,
+          "value": "gid=0",
+          "mode": "list",
+          "cachedResultName": "Sheet1",
+          "cachedResultUrl": "https://docs.google.com/spreadsheets/d/10Gv7LPrT3eZH5-CFXvjFw4D-mBtukei4hBZ7jWUwyXU/edit#gid=0"
+        },
+        "columns": {
+          "mappingMode": "defineBelow",
+          "value": {
+            "Status": "Done",
+            "Serial": "={{ $('When Executed by Another Workflow').item.json.SerialNumber }}"
+          },
+          "matchingColumns": [
+            "Serial"
+          ],
+          "schema": [
+            {
+              "id": "Serial",
+              "displayName": "Serial",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "Case ID",
+              "displayName": "Case ID",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": true
+            },
+            {
+              "id": "Risk Score",
+              "displayName": "Risk Score",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": true
+            },
+            {
+              "id": "Analysis",
+              "displayName": "Analysis",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": true
+            },
+            {
+              "id": "IOCs",
+              "displayName": "IOCs",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": true
+            },
+            {
+              "id": "Actions",
+              "displayName": "Actions",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": true
+            },
+            {
+              "id": "Status",
+              "displayName": "Status",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            }
+          ],
+          "attemptToConvertTypes": false,
+          "convertFieldsToString": false
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.googleSheets",
+      "typeVersion": 4.7,
+      "position": [
+        1520,
+        -800
+      ],
+      "id": "5d7cb1ac-c8b7-4caa-a702-9c0bed94c8b8",
+      "name": "Update Status over Tracker For Task to Done",
+      "credentials": {
+        "googleSheetsOAuth2Api": {
+          "id": "Y62tEALbYjZCSe2b",
+          "name": "Google Sheets account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 2
+          },
+          "conditions": [
+            {
+              "id": "d8e1186a-8aa9-4fdb-8ceb-1047531eddde",
+              "leftValue": "={{ $('Loop Over Cases').item.json.Actions }}",
+              "rightValue": "[]",
+              "operator": {
+                "type": "string",
+                "operation": "notEquals"
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.2,
+      "position": [
+        1296,
+        0
+      ],
+      "id": "8c7372eb-1f56-40a8-9855-c96cfa6add5a",
+      "name": "Actions Present"
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 2
+          },
+          "conditions": [
+            {
+              "id": "d39ebc00-3920-4b0f-87e1-1ae28da1774d",
+              "leftValue": "={{ $('Loop Over Cases').item.json.Actions }}",
+              "rightValue": "create_ticket",
+              "operator": {
+                "type": "string",
+                "operation": "contains"
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.2,
+      "position": [
+        176,
+        0
+      ],
+      "id": "27d3ff19-a3c2-48fd-91b1-6bf3405d6e2e",
+      "name": "If"
+    },
+    {
+      "parameters": {
+        "project": {
+          "__rl": true,
+          "value": "10000",
+          "mode": "list",
+          "cachedResultName": "Incident Response Tracker"
+        },
+        "issueType": {
+          "__rl": true,
+          "value": "10001",
+          "mode": "list",
+          "cachedResultName": "Task"
+        },
+        "summary": "={{ $('Loop Over Cases').item.json['Case ID'] }}",
+        "additionalFields": {}
+      },
+      "type": "n8n-nodes-base.jira",
+      "typeVersion": 1,
+      "position": [
+        400,
+        -96
+      ],
+      "id": "a003a27a-379d-488f-9d5e-e5b46c5c030b",
+      "name": "Create an issue",
+      "credentials": {
+        "jiraSoftwareCloudApi": {
+          "id": "u5EP8tTUuTOda57d",
+          "name": "Jira SW Cloud account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "operation": "appendOrUpdate",
+        "documentId": {
+          "__rl": true,
+          "value": "10Gv7LPrT3eZH5-CFXvjFw4D-mBtukei4hBZ7jWUwyXU",
+          "mode": "list",
+          "cachedResultName": "Incident Investigation & Tracker",
+          "cachedResultUrl": "https://docs.google.com/spreadsheets/d/10Gv7LPrT3eZH5-CFXvjFw4D-mBtukei4hBZ7jWUwyXU/edit?usp=drivesdk"
+        },
+        "sheetName": {
+          "__rl": true,
+          "value": "gid=0",
+          "mode": "list",
+          "cachedResultName": "Sheet1",
+          "cachedResultUrl": "https://docs.google.com/spreadsheets/d/10Gv7LPrT3eZH5-CFXvjFw4D-mBtukei4hBZ7jWUwyXU/edit#gid=0"
+        },
+        "columns": {
+          "mappingMode": "defineBelow",
+          "value": {
+            "Serial": "={{ $('Loop Over Cases').item.json.Serial }}",
+            "Jira ID": "={{ $('Create an issue').item.json.key }}"
+          },
+          "matchingColumns": [
+            "Serial"
+          ],
+          "schema": [
+            {
+              "id": "Serial",
+              "displayName": "Serial",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "Case ID",
+              "displayName": "Case ID",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": true
+            },
+            {
+              "id": "Risk Score",
+              "displayName": "Risk Score",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": true
+            },
+            {
+              "id": "Analysis",
+              "displayName": "Analysis",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": true
+            },
+            {
+              "id": "IOCs",
+              "displayName": "IOCs",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": true
+            },
+            {
+              "id": "Actions",
+              "displayName": "Actions",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": true
+            },
+            {
+              "id": "Status",
+              "displayName": "Status",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": true
+            },
+            {
+              "id": "Jira ID",
+              "displayName": "Jira ID",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            }
+          ],
+          "attemptToConvertTypes": false,
+          "convertFieldsToString": false
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.googleSheets",
+      "typeVersion": 4.7,
+      "position": [
+        1072,
+        -96
+      ],
+      "id": "1e3fbaeb-96d3-4e2f-adae-0d3b26d102d9",
+      "name": "Update Jira Id over Tracker to In Progress1",
+      "credentials": {
+        "googleSheetsOAuth2Api": {
+          "id": "Y62tEALbYjZCSe2b",
+          "name": "Google Sheets account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "documentId": {
+          "__rl": true,
+          "value": "10Gv7LPrT3eZH5-CFXvjFw4D-mBtukei4hBZ7jWUwyXU",
+          "mode": "list",
+          "cachedResultName": "Incident Investigation & Tracker",
+          "cachedResultUrl": "https://docs.google.com/spreadsheets/d/10Gv7LPrT3eZH5-CFXvjFw4D-mBtukei4hBZ7jWUwyXU/edit?usp=drivesdk"
+        },
+        "sheetName": {
+          "__rl": true,
+          "value": "gid=0",
+          "mode": "list",
+          "cachedResultName": "Sheet1",
+          "cachedResultUrl": "https://docs.google.com/spreadsheets/d/10Gv7LPrT3eZH5-CFXvjFw4D-mBtukei4hBZ7jWUwyXU/edit#gid=0"
+        },
+        "filtersUI": {
+          "values": [
+            {
+              "lookupColumn": "Case ID",
+              "lookupValue": "={{ $('Loop Over Cases').item.json['Case ID'] }}"
+            }
+          ]
+        },
+        "options": {
+          "returnFirstMatch": true
+        }
+      },
+      "type": "n8n-nodes-base.googleSheets",
+      "typeVersion": 4.7,
+      "position": [
+        848,
+        96
+      ],
+      "id": "b03ffee8-258d-4a8c-ba3e-2bf2f23175c9",
+      "name": "Get Jira ID",
+      "credentials": {
+        "googleSheetsOAuth2Api": {
+          "id": "Y62tEALbYjZCSe2b",
+          "name": "Google Sheets account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "operation": "update",
+        "issueKey": "={{ $json.key }}",
+        "updateFields": {
+          "assignee": {
+            "__rl": true,
+            "value": "712020:3a50c278-c7aa-42cc-9908-5ad0eacefab3",
+            "mode": "list",
+            "cachedResultName": "Sanglap Patra"
+          },
+          "statusId": {
+            "__rl": true,
+            "value": "31",
+            "mode": "list",
+            "cachedResultName": "In Progress"
+          }
+        }
+      },
+      "type": "n8n-nodes-base.jira",
+      "typeVersion": 1,
+      "position": [
+        624,
+        -96
+      ],
+      "id": "097bc1e6-092a-48fa-96f9-d9383ed725f2",
+      "name": "Update Assignee & Status",
+      "credentials": {
+        "jiraSoftwareCloudApi": {
+          "id": "u5EP8tTUuTOda57d",
+          "name": "Jira SW Cloud account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "documentId": {
+          "__rl": true,
+          "value": "10Gv7LPrT3eZH5-CFXvjFw4D-mBtukei4hBZ7jWUwyXU",
+          "mode": "list",
+          "cachedResultName": "Incident Investigation & Tracker",
+          "cachedResultUrl": "https://docs.google.com/spreadsheets/d/10Gv7LPrT3eZH5-CFXvjFw4D-mBtukei4hBZ7jWUwyXU/edit?usp=drivesdk"
+        },
+        "sheetName": {
+          "__rl": true,
+          "value": "gid=0",
+          "mode": "list",
+          "cachedResultName": "Sheet1",
+          "cachedResultUrl": "https://docs.google.com/spreadsheets/d/10Gv7LPrT3eZH5-CFXvjFw4D-mBtukei4hBZ7jWUwyXU/edit#gid=0"
+        },
+        "filtersUI": {
+          "values": [
+            {
+              "lookupColumn": "Case ID",
+              "lookupValue": "={{ $('Loop Over Cases').item.json['Case ID'] }}"
+            }
+          ]
+        },
+        "options": {
+          "returnFirstMatch": true
+        }
+      },
+      "type": "n8n-nodes-base.googleSheets",
+      "typeVersion": 4.7,
+      "position": [
+        1520,
+        -96
+      ],
+      "id": "40c63d5f-94f3-46ef-af3e-d67721393ad6",
+      "name": "Get Jira ID1",
+      "credentials": {
+        "googleSheetsOAuth2Api": {
+          "id": "Y62tEALbYjZCSe2b",
+          "name": "Google Sheets account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "resource": "issueComment",
+        "issueKey": "={{ $('When Executed by Another Workflow').item.json.JiraCaseID }}",
+        "comment": "=Action Completed:   {{ $('When Executed by Another Workflow').item.json.Action }}",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.jira",
+      "typeVersion": 1,
+      "position": [
+        1296,
+        -800
+      ],
+      "id": "7623029d-f96e-435b-a5ac-ccf1f9ad7671",
+      "name": "Action Stop Comment",
+      "credentials": {
+        "jiraSoftwareCloudApi": {
+          "id": "u5EP8tTUuTOda57d",
+          "name": "Jira SW Cloud account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "https://api.crowdstrike.com/devices/entities/scans/v1",
+        "authentication": "predefinedCredentialType",
+        "nodeCredentialType": "httpBearerAuth",
+        "sendBody": true,
+        "bodyParameters": {
+          "parameters": [
+            {
+              "name": "scan_type",
+              "value": "full"
+            },
+            {
+              "name": "device_id"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        848,
+        -1280
+      ],
+      "id": "aa1faa97-fc9d-4c6b-b6d0-40e98db58c7b",
+      "name": "CrowdStrike – scan_endpoint",
+      "credentials": {
+        "httpBearerAuth": {
+          "id": "jWgV8HyJtYsfhJgF",
+          "name": "Bearer Auth account"
+        }
+      },
+      "onError": "continueRegularOutput"
+    },
+    {
+      "parameters": {
+        "jsCode": "// Take IOCs field from model output and normalize\n\nlet raw = $('When Executed by Another Workflow').first().json.IOCs\n\n// If it's a string, try to parse it\nif (typeof raw === \"string\") {\n  try {\n    raw = JSON.parse(raw);\n  } catch (err) {\n    raw = {}; // fallback\n  }\n}\n\n// If it's still not an object, force empty object\nif (typeof raw !== \"object\" || raw === null) {\n  raw = {};\n}\n\n// Normalize to standard IOC schema\nconst iocs = {\n  alert_id: raw.alert_id || $json.alert_id || null,\n  user: raw.user_name || raw.user || raw.target_account || raw.device  || null,\n  source_ip: raw.source_ip || null,\n  source_hostname: raw.source_hostname || raw.destination_hostname,\n  process: raw.source_process_name || raw.process || raw.parent_process_name || raw.parent_process || null,\n  cmdline: raw.cmd_line || raw.cmdline || null,\n  file: raw.file_name || raw.file || null,\n  hash: raw.file_hash || raw.hash || null\n};\n\n// Clean: remove null/empty fields\nconst cleaned = Object.fromEntries(\n  Object.entries(iocs).filter(([_, v]) => v !== null && v !== \"\")\n);\n\nreturn { json: { IOCs: cleaned } };\n"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        176,
+        -800
+      ],
+      "id": "69e230fb-feba-447f-8f0f-f05f3d58d2b5",
+      "name": "Sanitize IOCs",
+      "onError": "continueRegularOutput"
+    },
+    {
+      "parameters": {
+        "url": "GET https://api.crowdstrike.com/devices/entities/scans/v1?ids=<scan_id>",
+        "authentication": "predefinedCredentialType",
+        "nodeCredentialType": "httpBearerAuth",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        1072,
+        -1280
+      ],
+      "id": "385ba620-30db-49eb-824d-f0d62fd4af7b",
+      "name": "Crowdstrike - Get Scan Results",
+      "credentials": {
+        "httpBearerAuth": {
+          "id": "jWgV8HyJtYsfhJgF",
+          "name": "Bearer Auth account"
+        }
+      },
+      "onError": "continueRegularOutput"
+    },
+    {
+      "parameters": {
+        "url": "GET https://api.crowdstrike.com/devices/queries/devices/v1?filter=hostname:",
+        "authentication": "predefinedCredentialType",
+        "nodeCredentialType": "httpBearerAuth",
+        "sendBody": true,
+        "bodyParameters": {
+          "parameters": [
+            {}
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        848,
+        -1088
+      ],
+      "id": "b5702e9a-49ce-4aa3-865e-2447266d0f30",
+      "name": "Crowdstrike - Get Endpoint1",
+      "credentials": {
+        "httpBearerAuth": {
+          "id": "jWgV8HyJtYsfhJgF",
+          "name": "Bearer Auth account"
+        }
+      },
+      "onError": "continueRegularOutput"
+    },
+    {
+      "parameters": {
+        "rules": {
+          "values": [
+            {
+              "conditions": {
+                "options": {
+                  "caseSensitive": true,
+                  "leftValue": "",
+                  "typeValidation": "strict",
+                  "version": 2
+                },
+                "conditions": [
+                  {
+                    "leftValue": "={{ $('When Executed by Another Workflow').item.json.Action }}",
+                    "rightValue": "scan_endpoint",
+                    "operator": {
+                      "type": "string",
+                      "operation": "equals"
+                    },
+                    "id": "f971d6b4-bb3b-4cad-afef-fe422419100f"
+                  }
+                ],
+                "combinator": "and"
+              },
+              "renameOutput": true,
+              "outputKey": "CrowdStrike – scan_endpoint"
+            },
+            {
+              "conditions": {
+                "options": {
+                  "caseSensitive": true,
+                  "leftValue": "",
+                  "typeValidation": "strict",
+                  "version": 2
+                },
+                "conditions": [
+                  {
+                    "id": "855c14b4-244d-4934-b82e-1b4255e16ca3",
+                    "leftValue": "={{ $('Action').item.json.Action }}",
+                    "rightValue": "quarantine_endpoint",
+                    "operator": {
+                      "type": "string",
+                      "operation": "equals",
+                      "name": "filter.operator.equals"
+                    }
+                  }
+                ],
+                "combinator": "and"
+              },
+              "renameOutput": true,
+              "outputKey": "CrowdStrike – quarantine_endpoint"
+            },
+            {
+              "conditions": {
+                "options": {
+                  "caseSensitive": true,
+                  "leftValue": "",
+                  "typeValidation": "strict",
+                  "version": 2
+                },
+                "conditions": [
+                  {
+                    "id": "bcf79172-903f-48f0-9f2f-e370e22e8eeb",
+                    "leftValue": "={{ $('Action').item.json.Action }}",
+                    "rightValue": "terminate_processes",
+                    "operator": {
+                      "type": "string",
+                      "operation": "equals",
+                      "name": "filter.operator.equals"
+                    }
+                  }
+                ],
+                "combinator": "and"
+              },
+              "renameOutput": true,
+              "outputKey": "CrowdStrike – terminate_processes"
+            },
+            {
+              "conditions": {
+                "options": {
+                  "caseSensitive": true,
+                  "leftValue": "",
+                  "typeValidation": "strict",
+                  "version": 2
+                },
+                "conditions": [
+                  {
+                    "id": "f7854701-7bf0-4088-9cb1-84f24d2da188",
+                    "leftValue": "={{ $('Action').item.json.Action }}",
+                    "rightValue": "force_password_reset",
+                    "operator": {
+                      "type": "string",
+                      "operation": "equals",
+                      "name": "filter.operator.equals"
+                    }
+                  }
+                ],
+                "combinator": "and"
+              },
+              "renameOutput": true,
+              "outputKey": "Okta – force_password_reset"
+            },
+            {
+              "conditions": {
+                "options": {
+                  "caseSensitive": true,
+                  "leftValue": "",
+                  "typeValidation": "strict",
+                  "version": 2
+                },
+                "conditions": [
+                  {
+                    "id": "16ba83ee-b326-437d-86be-d08f7f46c7f0",
+                    "leftValue": "={{ $('Action').item.json.Action }}",
+                    "rightValue": "revoke_tokens_sessions",
+                    "operator": {
+                      "type": "string",
+                      "operation": "equals",
+                      "name": "filter.operator.equals"
+                    }
+                  }
+                ],
+                "combinator": "and"
+              },
+              "renameOutput": true,
+              "outputKey": "Okta – revoke_tokens_sessions"
+            },
+            {
+              "conditions": {
+                "options": {
+                  "caseSensitive": true,
+                  "leftValue": "",
+                  "typeValidation": "strict",
+                  "version": 2
+                },
+                "conditions": [
+                  {
+                    "id": "766afe83-7144-4525-a09c-2e558c949bb9",
+                    "leftValue": "={{ $('Action').item.json.Action }}",
+                    "rightValue": "block_ip",
+                    "operator": {
+                      "type": "string",
+                      "operation": "equals",
+                      "name": "filter.operator.equals"
+                    }
+                  }
+                ],
+                "combinator": "and"
+              },
+              "renameOutput": true,
+              "outputKey": "Palo Alto – block_ip"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.switch",
+      "typeVersion": 3.2,
+      "position": [
+        400,
+        -864
+      ],
+      "id": "4f842bfa-aad5-4d58-ba16-ca997a87d8f6",
+      "name": "Action Performer"
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "POST https://api.crowdstrike.com/real-time-response/entities/sessions/v1",
+        "authentication": "predefinedCredentialType",
+        "nodeCredentialType": "httpBearerAuth",
+        "sendBody": true,
+        "bodyParameters": {
+          "parameters": [
+            {
+              "name": "device_id",
+              "value": "1234567890abcdef1234567890abcdef"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        848,
+        -896
+      ],
+      "id": "0a461ec6-77fb-498c-b2fb-3b08ead1df17",
+      "name": "Crowdstrike - Initiate RTR Session",
+      "credentials": {
+        "httpBearerAuth": {
+          "id": "jWgV8HyJtYsfhJgF",
+          "name": "Bearer Auth account"
+        }
+      },
+      "onError": "continueRegularOutput"
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "https://api.crowdstrike.com/real-time-response/entities/command/v1",
+        "authentication": "predefinedCredentialType",
+        "nodeCredentialType": "httpBearerAuth",
+        "sendBody": true,
+        "bodyParameters": {
+          "parameters": [
+            {
+              "name": "base_command",
+              "value": "kill"
+            },
+            {
+              "name": "command_string",
+              "value": "process_name.exe"
+            },
+            {
+              "name": "device_id",
+              "value": "1234567890abcdef1234567890abcdef"
+            },
+            {
+              "name": "session_id",
+              "value": "abcdef1234567890abcdef1234567890"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        1072,
+        -896
+      ],
+      "id": "cc87b5ee-4547-4b06-b29a-ecd3788fe548",
+      "name": "CrowdStrike - Kill Process",
+      "credentials": {
+        "httpBearerAuth": {
+          "id": "jWgV8HyJtYsfhJgF",
+          "name": "Bearer Auth account"
+        }
+      },
+      "onError": "continueRegularOutput"
+    },
+    {
+      "parameters": {
+        "url": "https://api.crowdstrike.com/devices/queries/devices/v1?filter=",
+        "authentication": "predefinedCredentialType",
+        "nodeCredentialType": "httpBearerAuth",
+        "sendBody": true,
+        "bodyParameters": {
+          "parameters": [
+            {}
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        624,
+        -1280
+      ],
+      "id": "8f849762-3999-4ecf-8077-291a37f5d996",
+      "name": "CrowdStrike - Get Endpoint",
+      "credentials": {
+        "httpBearerAuth": {
+          "id": "jWgV8HyJtYsfhJgF",
+          "name": "Bearer Auth account"
+        }
+      },
+      "onError": "continueRegularOutput"
+    },
+    {
+      "parameters": {
+        "url": "https://api.crowdstrike.com/devices/entities/network-isolation-actions/v1",
+        "authentication": "predefinedCredentialType",
+        "nodeCredentialType": "httpBearerAuth",
+        "sendBody": true,
+        "bodyParameters": {
+          "parameters": [
+            {
+              "name": "action",
+              "value": "isolate"
+            },
+            {
+              "name": "device_id",
+              "value": "1234567890abcdef1234567890abcdef"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        1072,
+        -1088
+      ],
+      "id": "ce58b1cc-d084-4045-9dfe-f405f40400e8",
+      "name": "CrowdStrike - Isolate Endpoint",
+      "credentials": {
+        "httpBearerAuth": {
+          "id": "jWgV8HyJtYsfhJgF",
+          "name": "Bearer Auth account"
+        }
+      },
+      "onError": "continueRegularOutput"
+    },
+    {
+      "parameters": {
+        "url": "GET https://api.crowdstrike.com/devices/queries/devices/v1?filter=hostname:",
+        "authentication": "predefinedCredentialType",
+        "nodeCredentialType": "httpBearerAuth",
+        "sendBody": true,
+        "bodyParameters": {
+          "parameters": [
+            {}
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        624,
+        -896
+      ],
+      "id": "d295e0b7-7536-467d-a83a-c79b207bbe37",
+      "name": "CrowdStrike - Get Endpoint2",
+      "credentials": {
+        "httpBearerAuth": {
+          "id": "jWgV8HyJtYsfhJgF",
+          "name": "Bearer Auth account"
+        }
+      },
+      "onError": "continueRegularOutput"
+    },
+    {
+      "parameters": {
+        "url": "https://<your_okta_domain>/api/v1/users/<login>",
+        "authentication": "genericCredentialType",
+        "genericAuthType": "httpCustomAuth",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        848,
+        -704
+      ],
+      "id": "c7b832f2-194c-46f0-bcb9-8a9061a1f71f",
+      "name": "Okta - Get UserID",
+      "credentials": {
+        "httpCustomAuth": {
+          "id": "JQ6RWIse5e6C4apq",
+          "name": "Custom Auth account"
+        }
+      },
+      "onError": "continueRegularOutput"
+    },
+    {
+      "parameters": {
+        "url": "https://<your_okta_domain>/api/v1/users/<login>",
+        "authentication": "genericCredentialType",
+        "genericAuthType": "httpCustomAuth",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        848,
+        -512
+      ],
+      "id": "9bfd407e-110f-4131-b2fd-b0d07d5ba2d8",
+      "name": "Okta - Get UserID1",
+      "credentials": {
+        "httpCustomAuth": {
+          "id": "JQ6RWIse5e6C4apq",
+          "name": "Custom Auth account"
+        }
+      },
+      "onError": "continueRegularOutput"
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "https://<your_okta_domain>/api/v1/users/<userId>/lifecycle/reset_password?sendEmail=true",
+        "authentication": "genericCredentialType",
+        "genericAuthType": "httpCustomAuth",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        1072,
+        -704
+      ],
+      "id": "eec36743-e4b2-4999-b1b6-999501d07302",
+      "name": "Okta - Force Password Reset",
+      "credentials": {
+        "httpCustomAuth": {
+          "id": "JQ6RWIse5e6C4apq",
+          "name": "Custom Auth account"
+        }
+      },
+      "onError": "continueRegularOutput"
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "https://<your_okta_domain>/oauth2/v1/revoke",
+        "authentication": "genericCredentialType",
+        "genericAuthType": "httpCustomAuth",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        1072,
+        -512
+      ],
+      "id": "9dd1f7c2-7b96-4e17-a00d-201493aa837e",
+      "name": "Okta - Revoke Sessions",
+      "credentials": {
+        "httpCustomAuth": {
+          "id": "JQ6RWIse5e6C4apq",
+          "name": "Custom Auth account"
+        }
+      },
+      "onError": "continueRegularOutput"
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "POST https://<firewall>/restapi/v10.2/Objects/Addresses",
+        "authentication": "genericCredentialType",
+        "genericAuthType": "httpCustomAuth",
+        "sendBody": true,
+        "bodyParameters": {
+          "parameters": [
+            {
+              "name": "@name",
+              "value": "Blocked-IP-185.244.42.12"
+            },
+            {
+              "name": "ip-netmask",
+              "value": "185.244.42.12"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        1072,
+        -320
+      ],
+      "id": "3d861d7f-670a-411b-8419-befd302a67c7",
+      "name": "PaloAlto - BlockIP",
+      "credentials": {
+        "httpCustomAuth": {
+          "id": "JQ6RWIse5e6C4apq",
+          "name": "Custom Auth account"
+        }
+      },
+      "onError": "continueRegularOutput"
+    },
+    {
+      "parameters": {
+        "resource": "issueComment",
+        "issueKey": "={{ $('When Executed by Another Workflow').item.json.JiraCaseID }}",
+        "comment": "=Action Start: {{ $('When Executed by Another Workflow').item.json.Action }}",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.jira",
+      "typeVersion": 1,
+      "position": [
+        -48,
+        -800
+      ],
+      "id": "9993ff1c-307e-43d9-ace3-b98195200894",
+      "name": "Action Start Comment",
+      "credentials": {
+        "jiraSoftwareCloudApi": {
+          "id": "u5EP8tTUuTOda57d",
+          "name": "Jira SW Cloud account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "resource": "issueComment",
+        "issueKey": "={{ $json['Jira ID'] }}",
+        "comment": "=Analysis: {{ $('Loop Over Cases').item.json.Analysis }}\n\nIOCs: {{ $('Loop Over Cases').item.json.IOCs }}\n\nActions: {{ $('Loop Over Cases').item.json.Actions }}",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.jira",
+      "typeVersion": 1,
+      "position": [
+        1072,
+        96
+      ],
+      "id": "65185066-dbf9-4f9a-9a51-d55706a551f7",
+      "name": "Add Analysis, IOCs & Actions as Comment",
+      "credentials": {
+        "jiraSoftwareCloudApi": {
+          "id": "u5EP8tTUuTOda57d",
+          "name": "Jira SW Cloud account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "resource": "issueComment",
+        "issueKey": "={{ $('Create an issue').item.json.key }}",
+        "comment": "=Analysis: {{ $('Loop Over Cases').item.json.Analysis }}\n\nIOCs: {{ $('Loop Over Cases').item.json.IOCs }}\n\nActions: {{ $('Loop Over Cases').item.json.Actions }}",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.jira",
+      "typeVersion": 1,
+      "position": [
+        848,
+        -96
+      ],
+      "id": "3537a792-1948-43b6-acf4-ac6e65011b9a",
+      "name": "Add Analysis, IOCs & Actions as Comment1",
+      "credentials": {
+        "jiraSoftwareCloudApi": {
+          "id": "u5EP8tTUuTOda57d",
+          "name": "Jira SW Cloud account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "fieldToSplitOut": "Actions",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.splitOut",
+      "typeVersion": 1,
+      "position": [
+        1968,
+        -96
+      ],
+      "id": "b347eed1-7fa0-4291-b964-f2ed8c725472",
+      "name": "Split Out"
+    },
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "3ac798e8-3856-4192-844d-6eaab5b50e1e",
+              "name": "Action",
+              "value": "={{ $json.Action }}",
+              "type": "string"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [
+        -272,
+        -800
+      ],
+      "id": "5c3191d6-2e62-4828-9dcb-48c69b079dea",
+      "name": "Action"
+    },
+    {
+      "parameters": {
+        "workflowInputs": {
+          "values": [
+            {
+              "name": "Action"
+            },
+            {
+              "name": "JiraCaseID"
+            },
+            {
+              "name": "SerialNumber",
+              "type": "number"
+            },
+            {
+              "name": "IOCs"
+            }
+          ]
+        }
+      },
+      "type": "n8n-nodes-base.executeWorkflowTrigger",
+      "typeVersion": 1.1,
+      "position": [
+        -496,
+        -800
+      ],
+      "id": "ef056da2-7bbc-43f9-a295-2cd15364a528",
+      "name": "When Executed by Another Workflow"
+    },
+    {
+      "parameters": {
+        "workflowId": {
+          "__rl": true,
+          "value": "lB7GOylzuPh6aU66",
+          "mode": "list",
+          "cachedResultName": "AI Powered - Incident Responder"
+        },
+        "workflowInputs": {
+          "mappingMode": "defineBelow",
+          "value": {
+            "Action": "={{ $json.Actions }}",
+            "JiraCaseID": "={{ $('Get Jira ID1').item.json['Jira ID'] }}",
+            "SerialNumber": "={{ $('Loop Over Cases').item.json.Serial }}",
+            "IOCs": "={{ $('Loop Over Cases').item.json.IOCs }}"
+          },
+          "matchingColumns": [],
+          "schema": [
+            {
+              "id": "Action",
+              "displayName": "Action",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "canBeUsedToMatch": true,
+              "type": "string",
+              "removed": false
+            },
+            {
+              "id": "JiraCaseID",
+              "displayName": "JiraCaseID",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "canBeUsedToMatch": true,
+              "type": "string",
+              "removed": false
+            },
+            {
+              "id": "SerialNumber",
+              "displayName": "SerialNumber",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "canBeUsedToMatch": true,
+              "type": "number",
+              "removed": false
+            },
+            {
+              "id": "IOCs",
+              "displayName": "IOCs",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "canBeUsedToMatch": true,
+              "type": "string",
+              "removed": false
+            }
+          ],
+          "attemptToConvertTypes": false,
+          "convertFieldsToString": true
+        },
+        "mode": "each",
+        "options": {
+          "waitForSubWorkflow": true
+        }
+      },
+      "type": "n8n-nodes-base.executeWorkflow",
+      "typeVersion": 1.2,
+      "position": [
+        2192,
+        80
+      ],
+      "id": "ce94625e-38ef-4987-b58c-47efa48266bd",
+      "name": "Call 'AI Powered - Incident Responder'"
+    }
+  ],
+  "pinData": {
+    "When Executed by Another Workflow": [
+      {
+        "json": {
+          "Action": "force_password_reset",
+          "JiraCaseID": "IRT-55",
+          "SerialNumber": 1,
+          "IOCs": "{\"alert_id\":\"1cc7a1f4-8a32-66cf-0848-c4f9fc25fee055\",\"user_name\":\"william.phillips@acmesecurityops.com\",\"source_hostname\":\"ACMELTMP24LH8Q-ILOP\",\"destination_hostname\":\"ACMELTMP24LH8Q-william.phillips.acmesecurityops.com\",\"target_account\":\"SERVICIO LOCAL\",\"logon_type\":2,\"event_count\":114,\"eventid\":4625}"
+        }
+      },
+      {
+        "json": {
+          "Action": "block_ip",
+          "JiraCaseID": "IRT-55",
+          "SerialNumber": 1,
+          "IOCs": "{\"alert_id\":\"1cc7a1f4-8a32-66cf-0848-c4f9fc25fee055\",\"user_name\":\"william.phillips@acmesecurityops.com\",\"source_hostname\":\"ACMELTMP24LH8Q-ILOP\",\"destination_hostname\":\"ACMELTMP24LH8Q-william.phillips.acmesecurityops.com\",\"target_account\":\"SERVICIO LOCAL\",\"logon_type\":2,\"event_count\":114,\"eventid\":4625}"
+        }
+      }
+    ]
+  },
+  "connections": {
+    "New Case Trigger": {
+      "main": [
+        [
+          {
+            "node": "Loop Over Cases",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Loop Over Cases": {
+      "main": [
+        [],
+        [
+          {
+            "node": "Update Status over Tracker to In Progress",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Update Status over Tracker to In Progress": {
+      "main": [
+        [
+          {
+            "node": "If",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Sanitize Actions": {
+      "main": [
+        [
+          {
+            "node": "Split Out",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Update Status over Tracker For Task to Not required": {
+      "main": [
+        [
+          {
+            "node": "Loop Over Cases",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Update Status over Tracker For Task to Done": {
+      "main": [
+        []
+      ]
+    },
+    "Actions Present": {
+      "main": [
+        [
+          {
+            "node": "Get Jira ID1",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Update Status over Tracker For Task to Not required",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "If": {
+      "main": [
+        [
+          {
+            "node": "Create an issue",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Get Jira ID",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Create an issue": {
+      "main": [
+        [
+          {
+            "node": "Update Assignee & Status",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Update Jira Id over Tracker to In Progress1": {
+      "main": [
+        [
+          {
+            "node": "Actions Present",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Get Jira ID": {
+      "main": [
+        [
+          {
+            "node": "Add Analysis, IOCs & Actions as Comment",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Update Assignee & Status": {
+      "main": [
+        [
+          {
+            "node": "Add Analysis, IOCs & Actions as Comment1",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Get Jira ID1": {
+      "main": [
+        [
+          {
+            "node": "Sanitize Actions",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Action Stop Comment": {
+      "main": [
+        [
+          {
+            "node": "Update Status over Tracker For Task to Done",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Sanitize IOCs": {
+      "main": [
+        [
+          {
+            "node": "Action Performer",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "CrowdStrike – scan_endpoint": {
+      "main": [
+        [
+          {
+            "node": "Crowdstrike - Get Scan Results",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Crowdstrike - Get Scan Results": {
+      "main": [
+        [
+          {
+            "node": "Action Stop Comment",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Action Performer": {
+      "main": [
+        [
+          {
+            "node": "CrowdStrike - Get Endpoint",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Crowdstrike - Get Endpoint1",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "CrowdStrike - Get Endpoint2",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Okta - Get UserID",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Okta - Get UserID1",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "PaloAlto - BlockIP",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Crowdstrike - Get Endpoint1": {
+      "main": [
+        [
+          {
+            "node": "CrowdStrike - Isolate Endpoint",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Crowdstrike - Initiate RTR Session": {
+      "main": [
+        [
+          {
+            "node": "CrowdStrike - Kill Process",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "CrowdStrike - Kill Process": {
+      "main": [
+        [
+          {
+            "node": "Action Stop Comment",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "CrowdStrike - Get Endpoint": {
+      "main": [
+        [
+          {
+            "node": "CrowdStrike – scan_endpoint",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "CrowdStrike - Isolate Endpoint": {
+      "main": [
+        [
+          {
+            "node": "Action Stop Comment",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "CrowdStrike - Get Endpoint2": {
+      "main": [
+        [
+          {
+            "node": "Crowdstrike - Initiate RTR Session",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Okta - Get UserID": {
+      "main": [
+        [
+          {
+            "node": "Okta - Force Password Reset",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Okta - Get UserID1": {
+      "main": [
+        [
+          {
+            "node": "Okta - Revoke Sessions",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Action Start Comment": {
+      "main": [
+        [
+          {
+            "node": "Sanitize IOCs",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "PaloAlto - BlockIP": {
+      "main": [
+        [
+          {
+            "node": "Action Stop Comment",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Okta - Revoke Sessions": {
+      "main": [
+        [
+          {
+            "node": "Action Stop Comment",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Okta - Force Password Reset": {
+      "main": [
+        [
+          {
+            "node": "Action Stop Comment",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Add Analysis, IOCs & Actions as Comment": {
+      "main": [
+        [
+          {
+            "node": "Actions Present",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Add Analysis, IOCs & Actions as Comment1": {
+      "main": [
+        [
+          {
+            "node": "Update Jira Id over Tracker to In Progress1",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Split Out": {
+      "main": [
+        [
+          {
+            "node": "Call 'AI Powered - Incident Responder'",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Action": {
+      "main": [
+        [
+          {
+            "node": "Action Start Comment",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "When Executed by Another Workflow": {
+      "main": [
+        [
+          {
+            "node": "Action",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Call 'AI Powered - Incident Responder'": {
+      "main": [
+        [
+          {
+            "node": "Loop Over Cases",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": false,
+  "settings": {
+    "executionOrder": "v1"
+  },
+  "versionId": "b428919e-52dc-49bc-b2ad-be490b0f418f",
+  "meta": {
+    "templateCredsSetupCompleted": true,
+    "instanceId": "3a39685ca0507cfa047793ccc02d2ad16e6af00b96b5b66611d7736c6a50ce98"
+  },
+  "id": "lB7GOylzuPh6aU66",
+  "tags": []
+}
